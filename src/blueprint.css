@@ -1,0 +1,266 @@
+/* ============================================================
+   Blueprint Design System — tokens
+   Load Google Fonts before this file:
+   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+   ============================================================ */
+
+:root {
+  /* ---------- color: raw palette ---------- */
+  --cream-paper:   #F4ECD8;   /* default warm background */
+  --chalk:         #FBF8F0;   /* elevated card surface */
+  --bone:          #EFE5CC;   /* subtle background variation */
+
+  --heeler-blue:   #3B8FD9;   /* primary */
+  --heeler-deep:   #1E5FA0;   /* primary pressed / heading on cream */
+  --heeler-mist:   #C8DEF1;   /* subtle blue wash */
+
+  --bingo-tan:     #E8A87C;   /* secondary accent */
+  --bingo-deep:    #C57A4D;
+  --bingo-cream:   #F6D8BD;
+
+  --ink-navy:      #0F1B2D;   /* body text, dark surface */
+  --ink-soft:      #2D3A52;   /* secondary text on cream */
+  --ink-mute:      #5A6477;   /* tertiary text */
+
+  --muff-rust:     #B8554A;   /* destructive */
+  --terminal-green:#5EBE9C;   /* success / diff+ */
+  --signal-amber:  #D9A441;   /* warning */
+
+  /* ---------- color: semantic ---------- */
+  --bg:            var(--cream-paper);
+  --bg-alt:        var(--bone);
+  --surface:       var(--chalk);
+  --surface-inv:   var(--ink-navy);
+
+  --fg1:           var(--ink-navy);    /* primary text */
+  --fg2:           var(--ink-soft);    /* secondary text */
+  --fg3:           var(--ink-mute);    /* tertiary text */
+  --fg-inv:        var(--cream-paper); /* text on dark */
+
+  --primary:       var(--heeler-blue);
+  --primary-press: var(--heeler-deep);
+  --primary-soft:  var(--heeler-mist);
+
+  --accent:        var(--bingo-tan);
+  --accent-soft:   var(--bingo-cream);
+
+  --danger:        var(--muff-rust);
+  --success:       var(--terminal-green);
+  --warning:       var(--signal-amber);
+
+  --ink:           var(--ink-navy);    /* the universal border color */
+  --rule:          var(--ink-navy);    /* dashed rules */
+
+  /* ---------- type: families ----------
+     One family. Variety comes from weight, size, case and color — not from mixing families. */
+  --font-mono:     "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-display:  var(--font-mono);
+
+  /* ---------- type: scale ---------- */
+  --fs-display:    clamp(48px, 6vw, 88px);
+  --fs-h1:         40px;
+  --fs-h2:         28px;
+  --fs-h3:         20px;
+  --fs-h4:         16px;
+  --fs-body:       15px;
+  --fs-small:      13px;
+  --fs-micro:      11px;
+
+  --lh-tight:      1.05;
+  --lh-snug:       1.25;
+  --lh-body:       1.55;
+
+  --tracking-tight:-0.02em;
+  --tracking-flat:  0em;
+  --tracking-loose: 0.08em;
+  --tracking-wide:  0.16em;
+
+  /* ---------- spacing (4px base) ---------- */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  24px;
+  --sp-6:  32px;
+  --sp-7:  48px;
+  --sp-8:  64px;
+  --sp-9:  96px;
+
+  /* ---------- radii ---------- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+
+  /* ---------- borders & shadows (offset blocks) ---------- */
+  --border-1: 1px solid var(--ink);
+  --border-2: 2px solid var(--ink);
+  --border-dashed: 1px dashed var(--ink);
+
+  --shadow-pop-sm: 2px 2px 0 0 var(--ink);
+  --shadow-pop:    4px 4px 0 0 var(--ink);
+  --shadow-pop-lg: 6px 6px 0 0 var(--ink);
+  --shadow-pop-accent: 4px 4px 0 0 var(--accent);
+  --shadow-pop-blue:   4px 4px 0 0 var(--primary);
+
+  --shadow-float: 0 12px 32px rgba(15, 27, 45, 0.18);
+
+  /* ---------- motion ---------- */
+  --ease-curt: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-fast: 120ms;
+  --t-med:  200ms;
+
+  /* ---------- decorative ---------- */
+  --grid-dot: radial-gradient(var(--ink-soft) 1px, transparent 1.4px);
+  --grid-size: 24px;
+  --grid-fade: 0.10;
+
+  /* ---------- icon ---------- */
+  --icon-source: "lucide"; /* documentation only */
+  --icon-stroke: 1.5;
+}
+
+/* ============================================================
+   semantic helpers
+   ============================================================ */
+
+html, body { background: var(--bg); color: var(--fg1); }
+body {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bp-display { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-display); line-height: var(--lh-tight); letter-spacing: var(--tracking-tight); }
+h1, .bp-h1 { font-family: var(--font-mono); font-weight: 700; font-size: var(--fs-h1); line-height: var(--lh-snug); letter-spacing: var(--tracking-tight); color: var(--fg1); }
+h2, .bp-h2 { font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-h2); line-height: var(--lh-snug); color: var(--fg1); }
+h3, .bp-h3 { font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-h3); line-height: var(--lh-snug); color: var(--fg1); }
+h4, .bp-h4 { font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-h4); line-height: var(--lh-snug); color: var(--fg1); }
+p, .bp-body { font-family: var(--font-mono); font-weight: 400; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--fg1); }
+small, .bp-small { font-size: var(--fs-small); color: var(--fg2); }
+.bp-micro { font-size: var(--fs-micro); color: var(--fg3); }
+
+.bp-label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-loose);
+  color: var(--fg2);
+}
+
+code, kbd, .bp-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+kbd, .bp-kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: var(--border-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 1px 0 var(--ink);
+  font-size: 0.85em;
+  color: var(--fg1);
+}
+
+/* ============================================================
+   primitives
+   ============================================================ */
+
+.bp-card {
+  background: var(--surface);
+  border: var(--border-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  padding: var(--sp-5);
+}
+
+.bp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 10px 16px;
+  border: var(--border-1);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--cream-paper);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--fs-body);
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-curt), box-shadow var(--t-fast) var(--ease-curt), background var(--t-fast) var(--ease-curt);
+  text-decoration: none;
+}
+.bp-btn:hover { background: var(--primary-press); }
+.bp-btn:active { transform: translate(2px, 2px); box-shadow: var(--shadow-pop-sm); }
+.bp-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.bp-btn[disabled] { opacity: 0.4; box-shadow: none; cursor: not-allowed; }
+
+.bp-btn--ghost { background: var(--surface); color: var(--fg1); }
+.bp-btn--ghost:hover { background: var(--bg-alt); }
+.bp-btn--accent { background: var(--accent); color: var(--ink); }
+.bp-btn--accent:hover { background: var(--bingo-deep); color: var(--cream-paper); }
+.bp-btn--danger { background: var(--danger); color: var(--cream-paper); }
+
+.bp-input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: var(--border-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--fg1);
+}
+.bp-input:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.bp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: var(--border-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-loose);
+}
+
+.bp-prompt::before { content: "$ "; color: var(--fg3); }
+.bp-comment { color: var(--fg3); }
+.bp-comment::before { content: "// "; }
+
+.bp-grid-bg {
+  background-color: var(--bg);
+  background-image: var(--grid-dot);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: 0 0;
+}
+
+.bp-rule-dashed {
+  border: none;
+  border-top: 1px dashed var(--ink);
+  margin: var(--sp-5) 0;
+}
+
+/* corner brackets — wrap any block in .bp-brackets to add ASCII corners */
+.bp-brackets {
+  position: relative;
+  padding: var(--sp-4);
+}
+.bp-brackets::before,
+.bp-brackets::after {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1;
+}
+.bp-brackets::before { content: "┌"; top: 4px; left: 4px; }
+.bp-brackets::after  { content: "┘"; bottom: 4px; right: 4px; }

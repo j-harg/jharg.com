@@ -1,0 +1,176 @@
+/*
+ * jharg.com — Blueprint Design System integration for Observable Framework
+ *
+ * Strategy:
+ *   1. Import Blueprint tokens (colors, type, spacing, shadows)
+ *   2. Override the two Framework root variables that cascade to everything:
+ *        --theme-background-a  → cream paper
+ *        --theme-foreground    → ink navy
+ *      Everything else (sidebar tint, muted text, faint borders) derives
+ *      automatically via color-mix() in abstract-light.css.
+ *   3. Redirect Framework's --sans-serif to IBM Plex Mono so all chrome
+ *      (sidebar, header, footer, inputs) uses the Blueprint typeface.
+ *   4. Light override pass for specific Framework elements that need
+ *      Blueprint's border/shadow vocabulary.
+ */
+
+@import "./blueprint.css";
+
+/* ============================================================
+   1. Observable Framework variable overrides
+   ============================================================ */
+
+:root {
+  /* Background: cream paper */
+  --theme-background-a: var(--cream-paper);
+
+  /* Primary text: ink navy */
+  --theme-foreground: var(--ink-navy);
+
+  /* Links and focus rings: heeler blue */
+  --theme-foreground-focus: var(--heeler-blue);
+
+  /* Redirect Framework's sans-serif to IBM Plex Mono */
+  --sans-serif: var(--font-mono);
+
+  /* Tighten Framework's own monospace stack too */
+  --monospace: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ============================================================
+   2. Body & prose
+   ============================================================ */
+
+body {
+  font-family: var(--font-mono);
+  background: var(--cream-paper);
+  color: var(--ink-navy);
+}
+
+/* Observable Framework wraps page content in .observablehq */
+.observablehq {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.observablehq h1 { font-size: var(--fs-h1); font-weight: 700; letter-spacing: var(--tracking-tight); }
+.observablehq h2 { font-size: var(--fs-h2); font-weight: 600; border-bottom: var(--border-dashed); padding-bottom: var(--sp-2); margin-top: var(--sp-7); }
+.observablehq h3 { font-size: var(--fs-h3); font-weight: 600; }
+.observablehq p  { line-height: var(--lh-body); }
+
+.observablehq a {
+  color: var(--heeler-blue);
+  text-decoration: none;
+}
+.observablehq a:hover {
+  text-decoration: underline;
+  color: var(--heeler-deep);
+}
+
+/* Horizontal rules → Blueprint dashed rule */
+.observablehq hr {
+  border: none;
+  border-top: var(--border-dashed);
+  margin: var(--sp-7) 0;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   3. Code blocks
+   ============================================================ */
+
+.observablehq pre,
+.observablehq code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--chalk);
+  border: var(--border-1);
+  border-radius: var(--radius-sm);
+}
+
+.observablehq pre {
+  padding: var(--sp-4) var(--sp-5);
+  overflow-x: auto;
+}
+
+/* ============================================================
+   4. Sidebar chrome
+   ============================================================ */
+
+/* The sidebar background is --theme-background-alt (auto-derived as
+   ~4% ink mixed into cream = bone). We just add the Blueprint border. */
+#observablehq-sidebar {
+  border-right: var(--border-1);
+  font-family: var(--font-mono);
+}
+
+/* Site title in sidebar */
+#observablehq-sidebar > ol:first-child {
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ============================================================
+   5. Tables
+   ============================================================ */
+
+.observablehq table {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.observablehq th {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-loose);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  border-bottom: var(--border-1);
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+}
+
+.observablehq td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink-navy) 15%, var(--cream-paper));
+}
+
+.observablehq tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================================
+   6. Observable inputs → Blueprint style
+   ============================================================ */
+
+/* Inputs rendered by Observable's stdlib use .observablehq-input class */
+.observablehq input[type="range"] {
+  accent-color: var(--heeler-blue);
+}
+
+.observablehq select {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  padding: 6px 10px;
+  border: var(--border-1);
+  border-radius: var(--radius-sm);
+  background: var(--chalk);
+  color: var(--ink-navy);
+  cursor: pointer;
+}
+
+.observablehq select:focus {
+  outline: 2px solid var(--heeler-blue);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   7. Plot chart container
+   ============================================================ */
+
+/* Observable Plot SVGs inherit the page font; nudge them to Plex Mono */
+.observablehq figure svg text,
+.observablehq svg text {
+  font-family: var(--font-mono) !important;
+}
