@@ -21,6 +21,11 @@
    ============================================================ */
 
 :root {
+  /* Constrain overall layout width and center it.
+     Framework default is 1440px — at that width content stretches unreadably.
+     1080px gives ~780px of content column alongside the 272px sidebar. */
+  --observablehq-max-width: 1080px;
+
   /* Background: cream paper */
   --theme-background-a: var(--cream-paper);
 
@@ -45,6 +50,8 @@ body {
   font-family: var(--font-mono);
   background: var(--cream-paper);
   color: var(--ink-navy);
+  max-width: 1080px !important;
+  margin: 0 auto !important;
 }
 
 /* Observable Framework wraps page content in .observablehq */
