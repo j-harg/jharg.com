@@ -1,0 +1,374 @@
+---
+title: DUoS — Distribution Use of System
+---
+
+# Distribution Use of System
+
+Every electricity bill in Great Britain includes a charge you almost certainly haven't heard of: DUoS, the Distribution Use of System charge. It pays for the wires, transformers, and substations that make up your local distribution network — the infrastructure that runs between the high-voltage national grid and the socket on your wall.
+
+DUoS is collected by the fourteen Distribution Network Operators (DNOs) that divide up Great Britain geographically. Each DNO sets its own rates, which is why someone in South West England pays a materially different network charge from someone in Yorkshire, even on otherwise identical tariffs.
+
+## The Red, Amber, and Green system
+
+The unit-rate portion of DUoS isn't flat — it varies by time of day using a three-band system:
+
+- **Red** — peak demand periods (typically 16:00–19:00 on weekdays). The most expensive band. Rates are 10–100× higher than Green in some regions.
+- **Amber** — shoulder periods (mornings and early evenings). Mid-range.
+- **Green** — nights, weekends, and most of the day. Cheapest or free.
+
+This structure was designed to send a price signal: if you can shift consumption out of the peak window, the network needs less capacity investment and everyone pays less over time.
+
+## The standing charge
+
+Alongside the unit rates, DUoS includes a fixed daily charge (p/MPAN/day) — one component of the standing charge you see on your bill. This covers the baseline cost of being connected to the network at all, regardless of how much electricity you use.
+
+## Explore the data
+
+Rates are published annually by each DNO and run from April to March. We have data for all 14 DNOs from 2022/23 to 2027/28.
+
+```js
+import { timeline } from "../components/timeline.js";
+import * as Plot from "npm:@observablehq/plot";
+import * as Inputs from "npm:@observablehq/inputs";
+
+const duos  = await FileAttachment("../data/duos.json").json();
+const bands = await FileAttachment("../data/bands.json").json();
+
+// Derived lookups
+const allYears = [...new Set(duos.map(d => d.year_label))].sort();
+const allDnos  = [...new Map(duos.map(d => [d.bsc_id, d])).values()]
+  .sort((a, b) => a.dno_name.localeCompare(b.dno_name));
+
+// Helper: calculate annual costs for a record at a given kWh level
+function calcCosts(r, kwh) {
+  const red_gbp      = r.red_fraction   * kwh * r.red_p_kwh   / 100;
+  const amber_gbp    = r.amber_fraction * kwh * r.amber_p_kwh / 100;
+  const green_gbp    = r.green_fraction * kwh * r.green_p_kwh / 100;
+  const standing_gbp = r.standing_p_day * 365 / 100;
+  const total_gbp    = red_gbp + amber_gbp + green_gbp + standing_gbp;
+  return {red_gbp, amber_gbp, green_gbp, standing_gbp, total_gbp};
+}
+```
+
+---
+
+## Time-band explorer
+
+Each DNO defines its own Red/Amber/Green windows. Most use a simple structure — Red at the evening peak, Green overnight and at weekends — but the exact hours, and whether there's a shoulder Amber period, vary significantly.
+
+```js
+const tbDno = view(Inputs.select(
+  allDnos,
+  {
+    label: "Region",
+    format: d => d.dno_name,
+    value: allDnos.find(d => d.bsc_id === "EELC"),
+  }
+));
+```
+
+```js
+timeline(bands[tbDno.bsc_id])
+```
+
+---
+
+## Annual cost calculator
+
+Use the controls below to estimate the DUoS component of an electricity bill for a given region, year, and consumption level. The cost is split into what goes to each time band and to the standing charge.
+
+```js
+const calcDno = view(Inputs.select(
+  allDnos,
+  {
+    label: "Region",
+    format: d => d.dno_name,
+    value: allDnos.find(d => d.bsc_id === "EELC"),
+  }
+));
+```
+
+```js
+// Only show years available for this DNO
+const calcYears = allYears.filter(y =>
+  duos.some(d => d.bsc_id === calcDno.bsc_id && d.year_label === y)
+);
+const calcYear = view(Inputs.select(calcYears, {label: "Year", value: calcYears.at(-1)}));
+```
+
+```js
+const calcKwh = view(Inputs.range([500, 6000], {
+  label: "Annual consumption (kWh)",
+  value: 2700,
+  step: 50,
+}));
+```
+
+```js
+const calcRecord = duos.find(d => d.bsc_id === calcDno.bsc_id && d.year_label === calcYear);
+
+if (!calcRecord) {
+  display(html`<p style="color: #888">No data available for this region and year.</p>`);
+} else {
+  const c = calcCosts(calcRecord, calcKwh);
+  const stackData = [
+    {component: "Peak (red)",       value: c.red_gbp,      order: 0},
+    {component: "Shoulder (amber)", value: c.amber_gbp,    order: 1},
+    {component: "Off-peak (green)", value: c.green_gbp,    order: 2},
+    {component: "Standing charge",  value: c.standing_gbp, order: 3},
+  ];
+
+  display(html`
+    <p>
+      At <strong>${calcKwh.toLocaleString()} kWh</strong> in
+      <strong>${calcRecord.dno_name}</strong> (${calcYear}),
+      the DUoS charge would be approximately
+      <strong>£${c.total_gbp.toFixed(2)}</strong> per year
+      — <strong>£${(c.total_gbp / calcKwh * 100).toFixed(2)}p/kWh</strong> effective rate.
+    </p>
+  `);
+
+  display(Plot.plot({
+    width: 680,
+    height: 90,
+    marginLeft: 10,
+    marginRight: 10,
+    x: {label: "Annual DUoS cost (£)", axis: "top"},
+    color: {
+      domain: ["Peak (red)", "Shoulder (amber)", "Off-peak (green)", "Standing charge"],
+      range:  ["#d62828",    "#f4a261",           "#52b788",          "#6c757d"],
+      legend: true,
+    },
+    marks: [
+      Plot.barX(stackData, Plot.stackX({
+        order: "order",
+        x: "value",
+        fill: "component",
+        y: () => "",
+        insetTop: 8,
+        insetBottom: 8,
+        rx: 3,
+      })),
+      Plot.text(stackData, Plot.stackX({
+        order: "order",
+        x: "value",
+        fill: "white",
+        y: () => "",
+        text: d => d.value >= 3 ? `£${d.value.toFixed(0)}` : "",
+        textAnchor: "middle",
+        fontWeight: "bold",
+        fontSize: 13,
+      })),
+      Plot.ruleX([0]),
+    ],
+  }));
+
+  display(html`
+    <table style="width:100%; border-collapse:collapse; font-size:0.9rem; margin-top:0.5rem">
+      <thead>
+        <tr style="border-bottom:1px solid #ddd; text-align:left">
+          <th style="padding:4px 8px">Component</th>
+          <th style="padding:4px 8px; text-align:right">kWh</th>
+          <th style="padding:4px 8px; text-align:right">Rate (p/kWh)</th>
+          <th style="padding:4px 8px; text-align:right">Cost (£/yr)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:4px 8px">🔴 Peak (red)</td>
+          <td style="padding:4px 8px; text-align:right">${(calcRecord.red_fraction * calcKwh).toFixed(0)}</td>
+          <td style="padding:4px 8px; text-align:right">${calcRecord.red_p_kwh.toFixed(2)}p</td>
+          <td style="padding:4px 8px; text-align:right">£${c.red_gbp.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 8px">🟡 Shoulder (amber)</td>
+          <td style="padding:4px 8px; text-align:right">${(calcRecord.amber_fraction * calcKwh).toFixed(0)}</td>
+          <td style="padding:4px 8px; text-align:right">${calcRecord.amber_p_kwh.toFixed(2)}p</td>
+          <td style="padding:4px 8px; text-align:right">£${c.amber_gbp.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 8px">🟢 Off-peak (green)</td>
+          <td style="padding:4px 8px; text-align:right">${(calcRecord.green_fraction * calcKwh).toFixed(0)}</td>
+          <td style="padding:4px 8px; text-align:right">${calcRecord.green_p_kwh.toFixed(2)}p</td>
+          <td style="padding:4px 8px; text-align:right">£${c.green_gbp.toFixed(2)}</td>
+        </tr>
+        <tr style="border-top:1px solid #ddd">
+          <td style="padding:4px 8px">Standing charge</td>
+          <td style="padding:4px 8px; text-align:right">—</td>
+          <td style="padding:4px 8px; text-align:right">${calcRecord.standing_p_day.toFixed(2)}p/day</td>
+          <td style="padding:4px 8px; text-align:right">£${c.standing_gbp.toFixed(2)}</td>
+        </tr>
+        <tr style="font-weight:bold; border-top:2px solid #333">
+          <td style="padding:4px 8px">Total DUoS</td>
+          <td style="padding:4px 8px; text-align:right">${calcKwh.toLocaleString()}</td>
+          <td style="padding:4px 8px; text-align:right">—</td>
+          <td style="padding:4px 8px; text-align:right">£${c.total_gbp.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+  `);
+}
+```
+
+---
+
+## Compare regions
+
+How does DUoS cost vary across all 14 DNOs at the same consumption level? Select a year and consumption to compare.
+
+```js
+const cmpYear = view(Inputs.select(allYears, {
+  label: "Year",
+  value: allYears.at(-2),  // default to most recent complete year
+}));
+```
+
+```js
+const cmpKwh = view(Inputs.range([500, 6000], {
+  label: "Annual consumption (kWh)",
+  value: 2700,
+  step: 50,
+}));
+```
+
+```js
+const cmpRecords = duos
+  .filter(d => d.year_label === cmpYear)
+  .map(d => {
+    const c = calcCosts(d, cmpKwh);
+    return {...d, ...c};
+  })
+  .sort((a, b) => b.total_gbp - a.total_gbp);
+
+const cmpData = cmpRecords.flatMap(d => [
+  {dno_name: d.dno_name, component: "Peak (red)",       value: d.red_gbp,      order: 0},
+  {dno_name: d.dno_name, component: "Shoulder (amber)", value: d.amber_gbp,    order: 1},
+  {dno_name: d.dno_name, component: "Off-peak (green)", value: d.green_gbp,    order: 2},
+  {dno_name: d.dno_name, component: "Standing charge",  value: d.standing_gbp, order: 3},
+]);
+
+const dnoOrder = cmpRecords.map(d => d.dno_name);
+
+display(Plot.plot({
+  width: 680,
+  height: cmpRecords.length * 30 + 60,
+  marginLeft: 260,
+  marginRight: 60,
+  x: {label: "Annual DUoS cost (£)", axis: "top"},
+  y: {
+    domain: dnoOrder,
+    label: null,
+  },
+  color: {
+    domain: ["Peak (red)", "Shoulder (amber)", "Off-peak (green)", "Standing charge"],
+    range:  ["#d62828",    "#f4a261",           "#52b788",          "#6c757d"],
+    legend: true,
+  },
+  marks: [
+    Plot.barX(cmpData, Plot.stackX({
+      order: "order",
+      x: "value",
+      y: "dno_name",
+      fill: "component",
+      insetTop: 3,
+      insetBottom: 3,
+      rx: 2,
+    })),
+    Plot.text(cmpRecords, {
+      x: d => d.total_gbp,
+      y: "dno_name",
+      text: d => `£${d.total_gbp.toFixed(0)}`,
+      dx: 6,
+      fontSize: 11,
+      textAnchor: "start",
+    }),
+    Plot.ruleX([0]),
+  ],
+}));
+
+const missing = ["HYDE", "NORW", "SPOW"].filter(id =>
+  !cmpRecords.some(d => d.bsc_id === id)
+);
+if (missing.length > 0) {
+  display(html`<p style="font-size:0.85rem; color:#888">
+    ⚠ No data for ${missing.join(", ")} in ${cmpYear}.
+  </p>`);
+}
+```
+
+---
+
+## Rate trends
+
+How have rates changed over time? Select one or more regions to compare.
+
+```js
+const trendDnos = view(Inputs.checkbox(
+  allDnos,
+  {
+    label: "Regions",
+    format: d => d.dno_name,
+    value: allDnos.filter(d => ["EELC", "SEEB", "SWEB", "YELG"].includes(d.bsc_id)),
+  }
+));
+```
+
+```js
+const trendData = duos
+  .filter(d => trendDnos.some(t => t.bsc_id === d.bsc_id))
+  .map(d => {
+    const c = calcCosts(d, 2700);
+    return {...d, ...c};
+  });
+
+if (trendData.length === 0) {
+  display(html`<p style="color:#888">Select at least one region above.</p>`);
+} else {
+  display(Plot.plot({
+    width: 680,
+    height: 320,
+    marginLeft: 50,
+    x: {
+      type: "band",
+      label: "Year",
+      tickRotate: -30,
+    },
+    y: {
+      label: "Annual DUoS cost at 2,700 kWh (£)",
+      zero: true,
+    },
+    color: {
+      legend: true,
+      tickFormat: d => allDnos.find(n => n.bsc_id === d)?.dno_name ?? d,
+    },
+    marks: [
+      Plot.line(trendData, {
+        x: "year_label",
+        y: "total_gbp",
+        stroke: "bsc_id",
+        marker: "circle",
+        strokeWidth: 2,
+        curve: "linear",
+      }),
+      Plot.dot(trendData, {
+        x: "year_label",
+        y: "total_gbp",
+        fill: "bsc_id",
+        r: 4,
+        tip: true,
+        title: d => `${allDnos.find(n => n.bsc_id === d.bsc_id)?.dno_name}\n${d.year_label}: £${d.total_gbp.toFixed(2)}`,
+      }),
+    ],
+  }));
+}
+```
+
+---
+
+## About this data
+
+Rates are sourced from each DNO's annual charging statements (published each spring for the following April–March charging year). All figures are for the **Domestic Aggregated** tariff class — the tariff applied to standard domestic (household) meters.
+
+**Data gaps:** HYDE (Scottish Hydro) is missing 2022/23 and 2025/26; NORW (Electricity North West) and SPOW (SP Distribution) are missing 2023/24 and 2024/25 due to non-standard PDF formats in those years.
+
+**Methodology note:** The cost calculator uses the D0018 PC1 demand profile (actual settlement data from 2023/24) to estimate what fraction of a typical household's annual consumption falls in each time band. This fraction is fixed regardless of total consumption — the underlying demand *shape* doesn't change when you use more or less electricity.
