@@ -85,19 +85,20 @@ const gridRows = allDnos.flatMap(dno => {
 display(Plot.plot({
   width,
   height: allDnos.length * 32 + 60,
-  marginLeft: 230,
+  marginLeft: 195,
   marginRight: 10,
   fx: {
     domain: ["weekday", "weekend"],
     label: null,
     tickFormat: d => d === "weekday" ? "Weekday" : "Weekend",
+    paddingInner: 0.15,
   },
   x: {
     domain: [0, 1440],
     label: null,
     axis: "top",
     tickFormat: d => `${String(Math.floor(d / 60)).padStart(2, "0")}:00`,
-    ticks: [360, 720, 1080, 1440],
+    ticks: [0, 360, 720, 1080, 1440],
   },
   y: {
     domain: dnoOrder,
