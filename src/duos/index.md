@@ -126,7 +126,7 @@ display(Plot.plot({
       },
       tip: { format: { x1: false, x2: false, y: false, fill: false } },
     }),
-    Plot.text(gridRows.filter(r => r.span > 120 && r.label), {
+    Plot.text(gridRows.filter(r => r.span >= 60 && r.label), {
       x: "mid",
       y: "short_name",
       fx: "day_type",
