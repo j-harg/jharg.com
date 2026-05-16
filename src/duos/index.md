@@ -27,9 +27,10 @@ Alongside the unit rates, DUoS includes a fixed daily charge (p/MPAN/day) — on
 Rates are published annually by each DNO and run from April to March. We have data for all 14 DNOs from 2022/23 to 2027/28.
 
 ```js
-import { timeline } from "../components/timeline.js";
 import * as Plot from "npm:@observablehq/plot";
 import * as Inputs from "npm:@observablehq/inputs";
+
+const BAND_COLOR = { red: "#d62828", amber: "#f4a261", green: "#52b788" };
 
 const duos  = await FileAttachment("../data/duos.json").json();
 const bands = await FileAttachment("../data/bands.json").json();
@@ -54,7 +55,7 @@ function calcCosts(r, kwh) {
 
 ## Time-band explorer
 
-Each DNO defines its own Red/Amber/Green windows. Most use a simple structure — Red at the evening peak, Green overnight and at weekends — but the exact hours, and whether there's a shoulder Amber period, vary significantly.
+Each DNO defines its own Red/Amber/Green windows. The chart shows weekday rates across the day — the bold line is the latest charging year, with earlier years faded behind it. Hover for exact rates.
 
 ```js
 const tbDno = view(Inputs.select(
@@ -68,7 +69,60 @@ const tbDno = view(Inputs.select(
 ```
 
 ```js
-timeline(bands[tbDno.bsc_id])
+{
+  const tbYears = allYears.filter(y => duos.some(d => d.bsc_id === tbDno.bsc_id && d.year_label === y));
+  const tbLatest = tbYears.at(-1);
+  const n = tbYears.length;
+
+  // Opacity: oldest ~0.12, latest 1.0, linear in between
+  const opacity = Object.fromEntries(tbYears.map((y, i) => [
+    y, n === 1 ? 1 : 0.12 + (i / (n - 1)) * 0.88,
+  ]));
+
+  // Horizontal segments: one per band window per year
+  const segs = tbYears.flatMap(year => {
+    const rec = duos.find(d => d.bsc_id === tbDno.bsc_id && d.year_label === year);
+    return bands[tbDno.bsc_id].weekday.map(({band, start_min, end_min}) => ({
+      x1: start_min / 60,
+      x2: end_min / 60,
+      y:  rec[`${band}_p_kwh`],
+      band, year,
+    }));
+  });
+
+  display(Plot.plot({
+    width: 680,
+    height: 260,
+    marginLeft: 50,
+    marginRight: 16,
+    x: {
+      domain: [0, 24],
+      label: "Hour of day",
+      tickFormat: h => `${String(h).padStart(2, "0")}:00`,
+      ticks: [0, 3, 6, 9, 12, 15, 18, 21, 24],
+    },
+    y: { label: "p/kWh", zero: true },
+    marks: [
+      Plot.ruleY([0], { stroke: "var(--theme-foreground-faintest)" }),
+      // Render oldest → newest so latest sits on top
+      ...tbYears.flatMap(year =>
+        Plot.link(segs.filter(s => s.year === year), {
+          x1: "x1", x2: "x2", y1: "y", y2: "y",
+          stroke: d => BAND_COLOR[d.band],
+          strokeWidth: year === tbLatest ? 3 : 1,
+          strokeOpacity: opacity[year],
+          strokeLinecap: "round",
+          channels: {
+            Year: "year",
+            Band: "band",
+            "Rate (p/kWh)": d => d.y.toFixed(3),
+          },
+          tip: { format: { x1: false, x2: false, y1: false, y2: false } },
+        })
+      ),
+    ],
+  }));
+}
 ```
 
 ---
