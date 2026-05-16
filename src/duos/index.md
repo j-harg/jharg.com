@@ -97,7 +97,7 @@ display(Plot.plot({
     label: null,
     axis: "top",
     tickFormat: d => `${String(Math.floor(d / 60)).padStart(2, "0")}:00`,
-    ticks: [0, 360, 720, 1080],
+    ticks: [360, 720, 1080, 1440],
   },
   y: {
     domain: dnoOrder,
