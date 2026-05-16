@@ -51,7 +51,7 @@ function calcCosts(r, kwh) {
 
 ## Rates by region
 
-Each DNO defines its own Red/Amber/Green windows. The grid shows band structure across all 14 regions for ${allYears.at(-1)} — hover a band for the rate. Below, select a region to see how rates have changed year-over-year.
+Each DNO defines its own Red/Amber/Green windows. The grid shows band structure across all 14 regions for ${allYears.at(-1)}. Numbers on the bars are rates in p/kWh — hover a band for the full breakdown. Below, select a region to see how rates have changed year-over-year.
 
 ```js
 const shortDno = name => {
@@ -77,7 +77,7 @@ const gridRows = allDnos.flatMap(dno => {
       rate: rec ? rec[`${band}_p_kwh`] : null,
       span: end_min - start_min,
       mid: (start_min + end_min) / 2,
-      label: rec ? `${rec[`${band}_p_kwh`].toFixed(1)}p` : "",
+      label: rec ? rec[`${band}_p_kwh`].toFixed(1) : "",
     }))
   );
 });
