@@ -112,14 +112,19 @@ const tbDno = view(Inputs.select(
           strokeWidth: year === tbLatest ? 3 : 1,
           strokeOpacity: opacity[year],
           strokeLinecap: "round",
-          channels: {
-            Year: "year",
-            Band: "band",
-            "Rate (p/kWh)": d => d.y.toFixed(3),
-          },
-          tip: { format: { x1: false, x2: false, y1: false, y2: false } },
         })
       ),
+      // Single nearest-point tooltip — pointer selects one mark at a time
+      Plot.tip(segs, Plot.pointer({
+        x: d => (d.x1 + d.x2) / 2,
+        y: "y",
+        channels: {
+          Year: "year",
+          Band: "band",
+          "Rate (p/kWh)": d => d.y.toFixed(3),
+        },
+        format: { x: false, y: false },
+      })),
     ],
   }));
 }
