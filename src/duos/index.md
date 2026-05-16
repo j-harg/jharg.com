@@ -59,10 +59,7 @@ const shortDno = name => {
   return s.length > 28 ? s.slice(0, 27) + "…" : s;
 };
 
-const nDnos = allDnos.length;
-const latestYear = [...allYears].reverse().find(y =>
-  duos.filter(d => d.year_label === y).length === nDnos
-);
+const latestYear = allYears.at(-1);
 const dnoOrder = allDnos.map(d => shortDno(d.dno_name));
 
 const fmtMin = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
