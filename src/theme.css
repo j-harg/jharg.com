@@ -14,6 +14,13 @@
  *      Blueprint's border/shadow vocabulary.
  */
 
+/* Framework base — must come first so our overrides win in the cascade.
+   Required because style: "theme.css" in config replaces (not supplements)
+   the default stylesheet, so layout.css etc. won't load otherwise. */
+@import "@observablehq/framework/dist/style/global.css";
+@import "@observablehq/framework/dist/style/layout.css";
+@import "@observablehq/framework/dist/style/abstract-light.css";
+
 @import "./blueprint.css";
 
 /* ============================================================
