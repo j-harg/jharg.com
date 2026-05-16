@@ -83,8 +83,8 @@ const gridRows = allDnos.flatMap(dno => {
 });
 
 display(Plot.plot({
-  width: 760,
-  height: allDnos.length * 28 + 60,
+  width,
+  height: allDnos.length * 32 + 60,
   marginLeft: 230,
   marginRight: 10,
   fx: {
@@ -97,7 +97,7 @@ display(Plot.plot({
     label: null,
     axis: "top",
     tickFormat: d => `${String(Math.floor(d / 60)).padStart(2, "0")}:00`,
-    ticks: [0, 360, 720, 1080, 1440],
+    ticks: [0, 360, 720, 1080],
   },
   y: {
     domain: dnoOrder,
