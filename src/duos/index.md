@@ -62,7 +62,7 @@ const tbDno = view(Inputs.select(
   allDnos,
   {
     label: "Region",
-    format: d => d.dno_name,
+    format: d => d.dno_name.length > 28 ? d.dno_name.slice(0, 27) + "…" : d.dno_name,
     value: allDnos.find(d => d.bsc_id === "EELC"),
   }
 ));
@@ -141,7 +141,7 @@ const calcDno = view(Inputs.select(
   allDnos,
   {
     label: "Region",
-    format: d => d.dno_name,
+    format: d => d.dno_name.length > 28 ? d.dno_name.slice(0, 27) + "…" : d.dno_name,
     value: allDnos.find(d => d.bsc_id === "EELC"),
   }
 ));
