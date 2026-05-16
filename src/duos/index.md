@@ -49,9 +49,9 @@ function calcCosts(r, kwh) {
 
 ---
 
-## Time bands by region
+## Rates by region
 
-Each DNO defines its own Red/Amber/Green windows. Rates shown for ${allYears.at(-1)} — hover a band for details.
+Each DNO defines its own Red/Amber/Green windows. The grid shows band structure across all 14 regions for ${allYears.at(-1)} — hover a band for the rate. Below, select a region to see how rates have changed year-over-year.
 
 ```js
 const shortDno = name => {
@@ -136,6 +136,73 @@ display(Plot.plot({
     }),
   ],
 }));
+```
+
+```js
+const tbDno = view(Inputs.select(
+  allDnos,
+  {
+    label: "Region",
+    format: d => d.dno_name.length > 28 ? d.dno_name.slice(0, 27) + "…" : d.dno_name,
+    value: allDnos.find(d => d.bsc_id === "EELC"),
+  }
+));
+```
+
+```js
+{
+  const tbYears = allYears.filter(y => duos.some(d => d.bsc_id === tbDno.bsc_id && d.year_label === y));
+  const tbLatest = tbYears.at(-1);
+  const n = tbYears.length;
+  const opacity = Object.fromEntries(tbYears.map((y, i) => [
+    y, n === 1 ? 1 : 0.12 + (i / (n - 1)) * 0.88,
+  ]));
+  const segs = tbYears.flatMap(year => {
+    const rec = duos.find(d => d.bsc_id === tbDno.bsc_id && d.year_label === year);
+    return bands[tbDno.bsc_id].weekday.map(({band, start_min, end_min}) => ({
+      x1: start_min / 60,
+      x2: end_min / 60,
+      y:  rec[`${band}_p_kwh`],
+      band, year,
+    }));
+  });
+
+  display(Plot.plot({
+    width: 680,
+    height: 260,
+    marginLeft: 50,
+    marginRight: 16,
+    x: {
+      domain: [0, 24],
+      label: "Hour of day",
+      tickFormat: h => `${String(h).padStart(2, "0")}:00`,
+      ticks: [0, 3, 6, 9, 12, 15, 18, 21, 24],
+    },
+    y: { label: "p/kWh", domain: [0, Math.max(...segs.map(s => s.y)) * 1.05] },
+    marks: [
+      Plot.ruleY([0], { stroke: "var(--theme-foreground-faintest)" }),
+      ...tbYears.flatMap(year =>
+        Plot.link(segs.filter(s => s.year === year), {
+          x1: "x1", x2: "x2", y1: "y", y2: "y",
+          stroke: d => BAND_COLOR[d.band],
+          strokeWidth: year === tbLatest ? 3 : 1,
+          strokeOpacity: opacity[year],
+          strokeLinecap: "round",
+        })
+      ),
+      Plot.tip(segs, Plot.pointer({
+        x: d => (d.x1 + d.x2) / 2,
+        y: "y",
+        channels: {
+          Year: "year",
+          Band: "band",
+          "Rate (p/kWh)": d => d.y.toFixed(3),
+        },
+        format: { x: false, y: false },
+      })),
+    ],
+  }));
+}
 ```
 
 ---
