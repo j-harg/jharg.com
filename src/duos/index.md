@@ -101,7 +101,7 @@ const tbDno = view(Inputs.select(
       tickFormat: h => `${String(h).padStart(2, "0")}:00`,
       ticks: [0, 3, 6, 9, 12, 15, 18, 21, 24],
     },
-    y: { label: "p/kWh", zero: true },
+    y: { label: "p/kWh", domain: [0, Math.max(...segs.map(s => s.y)) * 1.05] },
     marks: [
       Plot.ruleY([0], { stroke: "var(--theme-foreground-faintest)" }),
       // Render oldest → newest so latest sits on top
