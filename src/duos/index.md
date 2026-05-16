@@ -22,10 +22,6 @@ This structure was designed to send a price signal: if you can shift consumption
 
 Alongside the unit rates, DUoS includes a fixed daily charge (p/MPAN/day) — one component of the standing charge you see on your bill. This covers the baseline cost of being connected to the network at all, regardless of how much electricity you use.
 
-## Explore the data
-
-Rates are published annually by each DNO and run from April to March. We have data for all 14 DNOs from 2022/23 to 2027/28.
-
 ```js
 import * as Plot from "npm:@observablehq/plot";
 import * as Inputs from "npm:@observablehq/inputs";
@@ -53,81 +49,93 @@ function calcCosts(r, kwh) {
 
 ---
 
-## Time-band explorer
+## Time bands by region
 
-Each DNO defines its own Red/Amber/Green windows. The chart shows weekday rates across the day — the bold line is the latest charging year, with earlier years faded behind it. Hover for exact rates.
-
-```js
-const tbDno = view(Inputs.select(
-  allDnos,
-  {
-    label: "Region",
-    format: d => d.dno_name.length > 28 ? d.dno_name.slice(0, 27) + "…" : d.dno_name,
-    value: allDnos.find(d => d.bsc_id === "EELC"),
-  }
-));
-```
+Each DNO defines its own Red/Amber/Green windows. Rates shown for ${allYears.at(-1)} — hover a band for details.
 
 ```js
-{
-  const tbYears = allYears.filter(y => duos.some(d => d.bsc_id === tbDno.bsc_id && d.year_label === y));
-  const tbLatest = tbYears.at(-1);
-  const n = tbYears.length;
+const shortDno = name => {
+  const s = name.replace(/\s*\([^)]+\)\s*$/, "").trim();
+  return s.length > 28 ? s.slice(0, 27) + "…" : s;
+};
 
-  // Opacity: oldest ~0.12, latest 1.0, linear in between
-  const opacity = Object.fromEntries(tbYears.map((y, i) => [
-    y, n === 1 ? 1 : 0.12 + (i / (n - 1)) * 0.88,
-  ]));
+const latestYear = allYears.at(-1);
+const dnoOrder = allDnos.map(d => shortDno(d.dno_name));
 
-  // Horizontal segments: one per band window per year
-  const segs = tbYears.flatMap(year => {
-    const rec = duos.find(d => d.bsc_id === tbDno.bsc_id && d.year_label === year);
-    return bands[tbDno.bsc_id].weekday.map(({band, start_min, end_min}) => ({
-      x1: start_min / 60,
-      x2: end_min / 60,
-      y:  rec[`${band}_p_kwh`],
-      band, year,
-    }));
-  });
+const fmtMin = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
-  display(Plot.plot({
-    width: 680,
-    height: 260,
-    marginLeft: 50,
-    marginRight: 16,
-    x: {
-      domain: [0, 24],
-      label: "Hour of day",
-      tickFormat: h => `${String(h).padStart(2, "0")}:00`,
-      ticks: [0, 3, 6, 9, 12, 15, 18, 21, 24],
-    },
-    y: { label: "p/kWh", domain: [0, Math.max(...segs.map(s => s.y)) * 1.05] },
-    marks: [
-      Plot.ruleY([0], { stroke: "var(--theme-foreground-faintest)" }),
-      // Render oldest → newest so latest sits on top
-      ...tbYears.flatMap(year =>
-        Plot.link(segs.filter(s => s.year === year), {
-          x1: "x1", x2: "x2", y1: "y", y2: "y",
-          stroke: d => BAND_COLOR[d.band],
-          strokeWidth: year === tbLatest ? 3 : 1,
-          strokeOpacity: opacity[year],
-          strokeLinecap: "round",
-        })
-      ),
-      // Single nearest-point tooltip — pointer selects one mark at a time
-      Plot.tip(segs, Plot.pointer({
-        x: d => (d.x1 + d.x2) / 2,
-        y: "y",
-        channels: {
-          Year: "year",
-          Band: "band",
-          "Rate (p/kWh)": d => d.y.toFixed(3),
-        },
-        format: { x: false, y: false },
-      })),
-    ],
-  }));
-}
+const gridRows = allDnos.flatMap(dno => {
+  const rec = duos.find(d => d.bsc_id === dno.bsc_id && d.year_label === latestYear);
+  return ["weekday", "weekend"].flatMap(dayType =>
+    (bands[dno.bsc_id][dayType] ?? []).map(({band, start_min, end_min}) => ({
+      short_name: shortDno(dno.dno_name),
+      dno_name: dno.dno_name,
+      day_type: dayType,
+      band,
+      start_min,
+      end_min,
+      rate: rec ? rec[`${band}_p_kwh`] : null,
+      span: end_min - start_min,
+      mid: (start_min + end_min) / 2,
+      label: rec ? `${rec[`${band}_p_kwh`].toFixed(1)}p` : "",
+    }))
+  );
+});
+
+display(Plot.plot({
+  width: 760,
+  height: allDnos.length * 28 + 60,
+  marginLeft: 230,
+  marginRight: 10,
+  fx: {
+    domain: ["weekday", "weekend"],
+    label: null,
+    tickFormat: d => d === "weekday" ? "Weekday" : "Weekend",
+  },
+  x: {
+    domain: [0, 1440],
+    label: null,
+    axis: "top",
+    tickFormat: d => `${String(Math.floor(d / 60)).padStart(2, "0")}:00`,
+    ticks: [0, 360, 720, 1080, 1440],
+  },
+  y: {
+    domain: dnoOrder,
+    label: null,
+  },
+  color: {
+    domain: ["red", "amber", "green"],
+    range: [BAND_COLOR.red, BAND_COLOR.amber, BAND_COLOR.green],
+    legend: true,
+  },
+  marks: [
+    Plot.barX(gridRows, {
+      x1: "start_min",
+      x2: "end_min",
+      y: "short_name",
+      fx: "day_type",
+      fill: "band",
+      insetTop: 4,
+      insetBottom: 4,
+      channels: {
+        Region: "dno_name",
+        Band: d => d.band.charAt(0).toUpperCase() + d.band.slice(1),
+        "p/kWh": d => d.rate != null ? d.rate.toFixed(2) : "—",
+        Time: d => `${fmtMin(d.start_min)}–${fmtMin(d.end_min)}`,
+      },
+      tip: { format: { x1: false, x2: false, y: false, fill: false } },
+    }),
+    Plot.text(gridRows.filter(r => r.span > 120 && r.label), {
+      x: "mid",
+      y: "short_name",
+      fx: "day_type",
+      text: "label",
+      fill: "white",
+      fontWeight: "600",
+      fontSize: 9,
+    }),
+  ],
+}));
 ```
 
 ---
