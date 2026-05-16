@@ -298,11 +298,13 @@ if (!calcRecord) {
     ],
   }));
 
+  const dot = (color) => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>`;
   display(html`
     <table style="width:100%; border-collapse:collapse; font-size:0.9rem; margin-top:0.5rem">
       <thead>
         <tr style="border-bottom:1px solid #ddd; text-align:left">
           <th style="padding:4px 8px">Component</th>
+          <th style="padding:4px 8px; text-align:right">% of usage</th>
           <th style="padding:4px 8px; text-align:right">kWh</th>
           <th style="padding:4px 8px; text-align:right">Rate (p/kWh)</th>
           <th style="padding:4px 8px; text-align:right">Cost (£/yr)</th>
@@ -310,19 +312,22 @@ if (!calcRecord) {
       </thead>
       <tbody>
         <tr>
-          <td style="padding:4px 8px">🔴 Peak (red)</td>
+          <td style="padding:4px 8px">${dot(BAND_COLOR.red)}Peak (red)</td>
+          <td style="padding:4px 8px; text-align:right">${(calcRecord.red_fraction * 100).toFixed(1)}%</td>
           <td style="padding:4px 8px; text-align:right">${(calcRecord.red_fraction * calcKwh).toFixed(0)}</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.red_p_kwh.toFixed(2)}p</td>
           <td style="padding:4px 8px; text-align:right">£${c.red_gbp.toFixed(2)}</td>
         </tr>
         <tr>
-          <td style="padding:4px 8px">🟡 Shoulder (amber)</td>
+          <td style="padding:4px 8px">${dot(BAND_COLOR.amber)}Shoulder (amber)</td>
+          <td style="padding:4px 8px; text-align:right">${(calcRecord.amber_fraction * 100).toFixed(1)}%</td>
           <td style="padding:4px 8px; text-align:right">${(calcRecord.amber_fraction * calcKwh).toFixed(0)}</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.amber_p_kwh.toFixed(2)}p</td>
           <td style="padding:4px 8px; text-align:right">£${c.amber_gbp.toFixed(2)}</td>
         </tr>
         <tr>
-          <td style="padding:4px 8px">🟢 Off-peak (green)</td>
+          <td style="padding:4px 8px">${dot(BAND_COLOR.green)}Off-peak (green)</td>
+          <td style="padding:4px 8px; text-align:right">${(calcRecord.green_fraction * 100).toFixed(1)}%</td>
           <td style="padding:4px 8px; text-align:right">${(calcRecord.green_fraction * calcKwh).toFixed(0)}</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.green_p_kwh.toFixed(2)}p</td>
           <td style="padding:4px 8px; text-align:right">£${c.green_gbp.toFixed(2)}</td>
@@ -330,11 +335,13 @@ if (!calcRecord) {
         <tr style="border-top:1px solid #ddd">
           <td style="padding:4px 8px">Standing charge</td>
           <td style="padding:4px 8px; text-align:right">—</td>
+          <td style="padding:4px 8px; text-align:right">—</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.standing_p_day.toFixed(2)}p/day</td>
           <td style="padding:4px 8px; text-align:right">£${c.standing_gbp.toFixed(2)}</td>
         </tr>
         <tr style="font-weight:bold; border-top:2px solid #333">
           <td style="padding:4px 8px">Total DUoS</td>
+          <td style="padding:4px 8px; text-align:right">100%</td>
           <td style="padding:4px 8px; text-align:right">${calcKwh.toLocaleString()}</td>
           <td style="padding:4px 8px; text-align:right">—</td>
           <td style="padding:4px 8px; text-align:right">£${c.total_gbp.toFixed(2)}</td>
