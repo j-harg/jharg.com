@@ -102,19 +102,96 @@ body {
 }
 
 /* ============================================================
-   4. Sidebar chrome
+   4. Sidebar chrome — Blueprint dark treatment
    ============================================================ */
 
-/* The sidebar background is --theme-background-alt (auto-derived as
-   ~4% ink mixed into cream = bone). We just add the Blueprint border. */
+/* Dark sidebar: ink navy bg, cream text. Provides strong visual
+   separation from the cream-paper content area. */
 #observablehq-sidebar {
-  border-right: var(--border-1);
+  background: var(--ink-navy);
+  border-right: none;
   font-family: var(--font-mono);
+  color: color-mix(in srgb, var(--cream-paper) 70%, var(--ink-navy));
 }
 
-/* Site title in sidebar */
+/* Sticky site-title strip at top — must match sidebar bg */
 #observablehq-sidebar > ol:first-child {
   letter-spacing: var(--tracking-tight);
+  color: var(--cream-paper);
+  padding-top: 1.25rem;
+}
+#observablehq-sidebar > ol:first-child::before {
+  background: var(--ink-navy);
+}
+
+/* Section dividers */
+#observablehq-sidebar > ol,
+#observablehq-sidebar > details,
+#observablehq-sidebar > section {
+  border-bottom-color: color-mix(in srgb, var(--cream-paper) 12%, var(--ink-navy));
+}
+
+/* Group headers (e.g. "Energy") — micro uppercase label style */
+#observablehq-sidebar summary {
+  color: var(--cream-paper);
+  opacity: 0.45;
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-loose);
+  font-weight: 500;
+}
+
+/* Caret icon on collapsible sections */
+#observablehq-sidebar details summary::after {
+  background: color-mix(in srgb, var(--cream-paper) 40%, var(--ink-navy));
+}
+
+/* Nav links */
+.observablehq-link a {
+  color: color-mix(in srgb, var(--cream-paper) 70%, var(--ink-navy));
+  border-radius: var(--radius-sm);
+  transition: background var(--t-fast) var(--ease-curt), color var(--t-fast) var(--ease-curt);
+}
+
+/* Hover & active backgrounds */
+#observablehq-sidebar details summary:hover,
+.observablehq-link-active a,
+.observablehq-link a:hover {
+  background: color-mix(in srgb, var(--cream-paper) 10%, var(--ink-navy));
+  color: var(--cream-paper);
+}
+
+/* Active page indicator bar → heeler blue */
+.observablehq-link-active::before {
+  background: var(--heeler-blue);
+}
+
+/* Sidebar toggle button (hamburger strip at left edge of page) */
+#observablehq-sidebar-toggle {
+  color: var(--ink-mute);
+}
+
+/* Close button inside the sidebar */
+#observablehq-sidebar-close {
+  color: color-mix(in srgb, var(--cream-paper) 50%, var(--ink-navy));
+}
+
+/* Search box */
+#observablehq-search {
+  color: color-mix(in srgb, var(--cream-paper) 50%, var(--ink-navy));
+}
+#observablehq-search input {
+  background: color-mix(in srgb, var(--cream-paper) 8%, var(--ink-navy));
+  color: var(--cream-paper);
+  border: 1px solid color-mix(in srgb, var(--cream-paper) 18%, var(--ink-navy));
+  border-radius: var(--radius-sm);
+}
+#observablehq-search input::placeholder {
+  color: color-mix(in srgb, var(--cream-paper) 35%, var(--ink-navy));
+}
+#observablehq-search input:focus {
+  outline: 2px solid var(--heeler-blue);
+  outline-offset: 0;
 }
 
 /* ============================================================
