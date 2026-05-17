@@ -4,7 +4,7 @@ title: How electricity is priced
 
 # How electricity is priced
 
-The unit rate on your electricity bill is not a single number — it is a stack of separate cost components, each set by a different part of the industry. Understanding the stack is the prerequisite for understanding why prices vary, why they move, and why someone in Wales pays more than someone in London.
+To understand why your electricity tariff costs what it costs, why it moves and why someone in Wales might pay more than someone in London, you need to understand the underlying cost stack that your supplier is exposed to. Typically suppliers build a model for this cost stack, add up the various components, add a margin and set that as your tariff. Here we explore each element in turn to give you an understanding of your electricity tariff.
 
 ---
 
