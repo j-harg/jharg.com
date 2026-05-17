@@ -16,10 +16,10 @@ A domestic unit rate in Great Britain is built from four broad layers:
 import * as Plot from "npm:@observablehq/plot";
 
 const stack = [
-  {component: "Wholesale energy",    pct: 37, note: "Cost of buying electricity in the market"},
-  {component: "Network charges",     pct: 23, note: "Moving electricity from generators to your home"},
-  {component: "Policy levies",       pct: 23, note: "Renewables support, capacity market, social obligations"},
-  {component: "Supplier costs + VAT",pct: 17, note: "Operating costs, margin, 5% VAT"},
+  {component: "Wholesale",     pct: 37, note: "Spot price + BSUoS balancing charge"},
+  {component: "Network",       pct: 23, note: "DUoS + TNUoS + AAHEDC"},
+  {component: "Policy levies", pct: 23, note: "RO, FIT, CfD, Capacity Market, ECO, WHD"},
+  {component: "Supplier + VAT",pct: 17, note: "Operating costs, margin, 5% VAT"},
 ];
 
 const COLORS = ["#4e6fa3", "#e07b39", "#52b788", "#aaaaaa"];
@@ -28,7 +28,7 @@ display(Plot.plot({
   width: 560,
   height: 72,
   marginLeft: 0, marginRight: 0, marginTop: 8, marginBottom: 32,
-  x: {domain: [0, 100], label: "Share of unit rate (%)", ticks: 5, tickFormat: d => `${d}%`},
+  x: {domain: [0, 100], label: "Indicative share of unit rate (%)", ticks: 5, tickFormat: d => `${d}%`},
   y: {domain: [""], label: null, axis: null},
   color: {domain: stack.map(d => d.component), range: COLORS, legend: true},
   marks: [
@@ -40,61 +40,77 @@ display(Plot.plot({
 }));
 ```
 
-These percentages are indicative for a typical 2024/25 domestic tariff. They shift substantially with wholesale prices — during the 2022–23 energy crisis, wholesale's share exceeded 60%.
+Indicative for a typical 2024/25 domestic tariff. During the 2022–23 energy crisis, wholesale's share exceeded 60%.
 
-| Layer | Who sets it | Varies by |
+---
+
+## Components in detail
+
+**Wholesale** — the half-hourly market price for electricity, paid at transmission level. BSUoS (Balancing Services Use of System) is added on top: a charge National Grid ESO levies each half-hour to cover the cost of keeping the grid in balance. Both are billed on gross transmission volume.
+
+**Network** covers three separate charges:
+
+| Charge | Who charges | What it covers |
 |---|---|---|
-| Wholesale | Market (half-hourly auctions) | Time, season, fuel prices |
-| Network | Ofgem-regulated DNOs + National Grid | **Region**, time of day |
-| Policy levies | Government / Ofgem | Year (set annually) |
-| Supplier costs | Each supplier | Supplier efficiency, tariff type |
+| DUoS | 14 regional DNOs | Local distribution network (substation to meter) |
+| TNUoS | National Grid ESO | High-voltage transmission across GB |
+| AAHEDC | Ofgem | Assistance for high-cost distribution areas (Hydro) |
+
+DUoS is where regional variation is most pronounced — rates differ by up to 4× across DNO areas and vary by time of day. → [Explore DUoS charges by region](../duos/)
+
+**Policy levies** are flat per-kWh charges set annually to fund government energy policy:
+
+- **RO** — Renewables Obligation (support for renewable generation)
+- **FIT** — Feed-in Tariff (legacy small-scale generation payments)
+- **CfD** — Contracts for Difference (newer renewable support mechanism)
+- **CM** — Capacity Market levy (payment to keep backup capacity available)
+- **ECO / WHD** — Energy Company Obligation and Warm Home Discount (social obligations)
+
+**Supplier costs** cover metering, customer services, hedging, and a retail margin, with 5% VAT applied to the total.
 
 ---
 
-## Network charges in detail
+## Losses and the volume hierarchy
 
-Network costs split into two tiers:
+Electricity is lost as heat in wires — roughly 7–10% of what generators inject never reaches a customer meter. Suppliers account for this by purchasing more wholesale energy than their customers consume. Each cost component is charged on a different gross-up basis:
 
-**Transmission (TNUoS)** — charged by National Grid for the high-voltage wires running across the country. Set annually, broadly uniform for demand customers.
+```
+d  =  metered demand          (what the customer actually uses, kWh)
+g  =  d × LLF                 (grossed up to Grid Supply Point for distribution losses)
+f  =  g × TLM                 (grossed up to transmission level for transmission losses)
+```
 
-**Distribution (DUoS)** — charged by the 14 regional Distribution Network Operators for the local network from the substation to your meter. This is where regional variation lives: rates differ by up to 4× between the cheapest and most expensive DNO areas, and vary by time of day through the red/amber/green band system.
+- **LLF** (Line Loss Factor) — set per DNO per time period, typically **1.07–1.10** for domestic LV
+- **TLM** (Transmission Loss Multiplier) — set per zone per BSC season, typically **1.00–1.02**
 
-→ [Explore DUoS charges by region](../duos/)
+Charges billed at each level:
 
----
-
-## Losses
-
-Electricity is lost as heat in wires during transmission and distribution — roughly 7–10% of what enters the grid never reaches a meter. Suppliers must account for this by buying more wholesale energy than their customers actually consume.
-
-Each metering point is assigned a **Line Loss Factor (LLF)**, the product of a Transmission Loss Multiplier (TLM) and a Distribution Loss Factor (DLF):
-
-$$\text{LLF} = \text{TLM} \times \text{DLF}$$
-
-A typical domestic LLF is **1.07–1.10**, meaning a supplier buys ~8–10% more energy than the customer uses. This uplift is applied to the wholesale cost and, as a result, also amplifies the exposure to spot price volatility.
+| Volume basis | Charges |
+|---|---|
+| **d** (metered) | DUoS, RO, FIT, ECO, WHD |
+| **g** (GSP) | TNUoS, AAHEDC |
+| **f** (transmission) | Wholesale spot, BSUoS, NCC |
 
 ---
 
 ## The formula
 
-Combining the layers, a simplified retail unit rate (p/kWh) looks like:
+For each half-hour settlement period, the cost to serve one unit of metered demand is:
 
-$$\text{unit rate} = \left(\frac{\text{wholesale}}{\text{LLF}} + \text{DUoS} + \text{TNUoS} + \text{levies} + \text{opex}\right) \times 1.05$$
+```
+cost = f × spot    +  f × BSUoS
+     + g × TNUoS   +  g × AAHEDC
+     + d × DUoS    +  d × RO  +  d × FIT  +  d × ECO  +  d × WHD
+     + supplier opex + margin
+     × 1.05  (VAT)
+```
 
-Where:
-- **wholesale / LLF** — effective wholesale cost adjusted for losses
-- **DUoS** — distribution charge, region- and time-varying
-- **TNUoS** — transmission charge, annually set
-- **levies** — RO, FIT, CfD, Capacity Market, WHD, ECO
-- **opex** — supplier operating costs and margin
-- **× 1.05** — 5% VAT
-
-The standing charge follows a parallel structure: a fixed daily sum covering metering, network connection costs, and a share of social levies, regardless of consumption.
+The nested structure (d → g → f) means transmission-level charges are amplified by **both** LLF and TLM. A supplier with a high-loss-factor customer effectively pays more for wholesale and BSUoS even at identical spot prices.
 
 ---
 
 ## What this site covers
 
-The model underlying this site focuses on the **network layer** — specifically DUoS charges across all 14 DNO regions from 2022/23 to 2027/28. Wholesale and levy components are not yet modelled.
+The model underlying this site focuses on the **DUoS** component — distribution charges across all 14 DNO regions from 2022/23 to 2027/28. Wholesale, BSUoS, TNUoS, and policy levy components are not yet modelled.
 
 → [DUoS: Distribution charges by region](../duos/)
