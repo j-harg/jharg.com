@@ -443,7 +443,7 @@ if (!calcRecord) {
 
 ## Compare regions
 
-How does DUoS cost vary across all 14 DNOs at the same consumption level? Select a year and consumption to compare.
+How does DUoS cost vary across all 14 DNOs at the same consumption level? Costs are calculated using a fixed consumption split of 15% red / 45% amber / 40% green — a round-number approximation of the national D0018 PC1 average. Select a year and consumption to compare.
 
 ```js
 const cmpYear = view(Inputs.select(allYears, {
@@ -461,10 +461,12 @@ const cmpKwh = view(Inputs.range([500, 6000], {
 ```
 
 ```js
+const STD_FRACS = {red_fraction: 0.15, amber_fraction: 0.45, green_fraction: 0.40};
+
 const cmpRecords = duos
   .filter(d => d.year_label === cmpYear)
   .map(d => {
-    const c = calcCosts(d, cmpKwh);
+    const c = calcCosts({...d, ...STD_FRACS}, cmpKwh);
     return {...d, ...c};
   })
   .sort((a, b) => b.total_gbp - a.total_gbp);
