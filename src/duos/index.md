@@ -531,24 +531,49 @@ if (missing.length > 0) {
 
 ## Rate trends
 
-How have rates changed over time? Select one or more regions to compare.
+How have annual DUoS costs changed over time? At 2,700 kWh with 15% red / 45% amber / 40% green consumption split.
 
 ```js
-const trendDnos = view(Inputs.checkbox(
-  allDnos,
-  {
-    label: "Regions",
-    format: d => d.dno_name,
+const trendDnos = view((() => {
+  const cb = Inputs.checkbox(allDnos, {
+    format: d => d.dno_name.length > 28 ? d.dno_name.slice(0, 27) + "…" : d.dno_name,
     value: allDnos.filter(d => ["EELC", "SEEB", "SWEB", "YELG"].includes(d.bsc_id)),
-  }
-));
+  });
+
+  const btn = document.createElement("button");
+  Object.assign(btn.style, {fontSize: "0.8rem", cursor: "pointer", marginBottom: "6px", display: "block"});
+
+  const refresh = () => {
+    const n = cb.querySelectorAll("input[type=checkbox]:checked").length;
+    btn.textContent = n === allDnos.length ? "Deselect all" : "Select all";
+  };
+  refresh();
+
+  btn.addEventListener("click", () => {
+    const allChecked = cb.querySelectorAll("input[type=checkbox]:checked").length === allDnos.length;
+    cb.querySelectorAll("input[type=checkbox]").forEach(inp => { inp.checked = !allChecked; });
+    cb.dispatchEvent(new Event("input", {bubbles: true}));
+    refresh();
+  });
+
+  cb.addEventListener("input", refresh);
+
+  const wrapper = html`<div>${btn}${cb}</div>`;
+  wrapper.value = cb.value;
+  cb.addEventListener("input", () => {
+    wrapper.value = cb.value;
+    wrapper.dispatchEvent(new Event("input", {bubbles: true}));
+  });
+
+  return wrapper;
+})());
 ```
 
 ```js
 const trendData = duos
   .filter(d => trendDnos.some(t => t.bsc_id === d.bsc_id))
   .map(d => {
-    const c = calcCosts(d, 2700);
+    const c = calcCosts({...d, ...STD_FRACS}, 2700);
     return {...d, ...c};
   });
 
@@ -565,7 +590,7 @@ if (trendData.length === 0) {
       tickRotate: -30,
     },
     y: {
-      label: "Annual DUoS cost at 2,700 kWh (£)",
+      label: "Annual DUoS cost — 2,700 kWh, 15/45/40 split (£)",
       zero: true,
     },
     color: {
