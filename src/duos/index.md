@@ -546,9 +546,12 @@ if (cmpView === "Bar chart") {
   const inRegion   = featureData.filter(d => !leaderOffsets[d.bsc_id]);
   const withLeader = featureData.filter(d =>  leaderOffsets[d.bsc_id]);
 
+  const mapW = Math.min(420, width - 180);
+  const mapH = Math.min(640, mapW * 1.52);
+
   const plt = Plot.plot({
-    width:  Math.min(520, width),
-    height: Math.min(640, width * 1.23),
+    width:  mapW,
+    height: mapH,
     projection: {type: "mercator", domain: boundaries},
     color: {
       type: "linear",
@@ -600,7 +603,31 @@ if (cmpView === "Bar chart") {
     ],
   });
 
-  display(plt);
+  // Ranked legend — sorted high to low (cmpRecords is already sorted desc)
+  const rankDiv = document.createElement("div");
+  rankDiv.style.cssText = "display:flex;flex-direction:column;gap:3px;font-size:0.78rem;font-family:var(--font-mono);flex-shrink:0;width:155px;padding-top:56px";
+
+  cmpRecords.forEach((d, i) => {
+    const name = d.dno_name.replace(/\s*\([^)]+\)\s*$/, "").trim();
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;justify-content:space-between;gap:8px;white-space:nowrap";
+    const left = document.createElement("span");
+    left.style.cssText = "color:var(--ink-mute,#888);flex-shrink:0";
+    left.textContent = `${i + 1}.`;
+    const mid = document.createElement("span");
+    mid.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis";
+    mid.textContent = name.length > 20 ? name.slice(0, 19) + "…" : name;
+    const right = document.createElement("span");
+    right.style.cssText = "flex-shrink:0;font-weight:600";
+    right.textContent = `£${d.total_gbp.toFixed(0)}`;
+    row.append(left, mid, right);
+    rankDiv.append(row);
+  });
+
+  const mapWrapper = document.createElement("div");
+  mapWrapper.style.cssText = "display:flex;align-items:flex-start;gap:16px";
+  mapWrapper.append(plt, rankDiv);
+  display(mapWrapper);
 
   // Draw leader lines by measuring actual rendered positions
   requestAnimationFrame(() => {
