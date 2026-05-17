@@ -298,7 +298,11 @@ if (!calcRecord) {
     ],
   }));
 
-  const dot = (color) => `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>`;
+  const dot = (color) => {
+    const s = document.createElement("span");
+    Object.assign(s.style, {display:"inline-block", width:"10px", height:"10px", background:color, marginRight:"5px", verticalAlign:"middle"});
+    return s;
+  };
   display(html`
     <table style="width:100%; border-collapse:collapse; font-size:0.9rem; margin-top:0.5rem">
       <thead>
