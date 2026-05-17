@@ -240,6 +240,16 @@ body {
   accent-color: var(--heeler-blue);
 }
 
+input[type="range"]::-webkit-slider-runnable-track {
+  background: color-mix(in srgb, var(--ink-navy) 12%, var(--cream-paper));
+  border-radius: 4px;
+}
+
+input[type="range"]::-moz-range-track {
+  background: color-mix(in srgb, var(--ink-navy) 12%, var(--cream-paper));
+  border-radius: 4px;
+}
+
 .observablehq select {
   font-family: var(--font-mono);
   font-size: var(--fs-body);
