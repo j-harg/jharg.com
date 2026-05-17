@@ -534,87 +534,109 @@ if (missing.length > 0) {
 How have annual DUoS costs changed over time? At 2,700 kWh with 15% red / 45% amber / 40% green consumption split.
 
 ```js
-const trendDnos = view((() => {
-  const cb = Inputs.checkbox(allDnos, {
-    format: d => d.dno_name.length > 28 ? d.dno_name.slice(0, 27) + "…" : d.dno_name,
-    value: allDnos.filter(d => ["EELC", "SEEB", "SWEB", "YELG"].includes(d.bsc_id)),
+{
+  // Pre-compute colors so chart and legend share the same palette
+  const colorScale = Plot.scale({
+    color: { type: "ordinal", domain: allDnos.map(d => d.bsc_id) },
   });
 
-  const btn = document.createElement("button");
-  Object.assign(btn.style, {fontSize: "0.8rem", cursor: "pointer", marginBottom: "6px", display: "block"});
+  const defaultIds = new Set(["EELC"]);
+  const selected = new Set(defaultIds);
 
-  const refresh = () => {
-    const n = cb.querySelectorAll("input[type=checkbox]:checked").length;
-    btn.textContent = n === allDnos.length ? "Deselect all" : "Select all";
+  const chartDiv = document.createElement("div");
+  const legendDiv = document.createElement("div");
+  legendDiv.style.cssText = "display:flex;flex-direction:column;gap:0;font-size:0.78rem;font-family:var(--font-mono);flex-shrink:0;padding-top:20px";
+
+  // Toggle-all button sits above the chart+legend row, not inside the legend
+  const btn = document.createElement("button");
+  Object.assign(btn.style, {fontSize: "0.78rem", cursor: "pointer", marginBottom: "6px", display: "inline-block", fontFamily: "var(--font-mono)"});
+  const refreshBtn = () => { btn.textContent = selected.size === allDnos.length ? "Deselect all" : "Select all"; };
+  refreshBtn();
+
+  const outer = document.createElement("div");
+  outer.style.cssText = "display:flex;align-items:flex-start;gap:16px";
+  outer.append(chartDiv, legendDiv);
+
+  const wrapper = document.createElement("div");
+  wrapper.append(btn, outer);
+
+  const renderChart = (h) => {
+    const data = duos
+      .filter(d => selected.has(d.bsc_id))
+      .map(d => { const c = calcCosts({...d, ...STD_FRACS}, 2700); return {...d, ...c}; });
+
+    chartDiv.innerHTML = "";
+    chartDiv.append(Plot.plot({
+        width: Math.max(400, width - 200),
+        height: h ?? Math.max(300, 20 + allDnos.length * 26),
+        marginLeft: 50,
+        x: { type: "band", label: null },
+        y: { label: "Annual DUoS cost — 2,700 kWh, 15/45/40 split (£)", zero: true },
+        color: {
+          domain: allDnos.map(d => d.bsc_id),
+          range: allDnos.map(d => colorScale.apply(d.bsc_id)),
+        },
+        marks: [
+          Plot.line(data, {
+            x: "year_label", y: "total_gbp", stroke: "bsc_id",
+            marker: "circle", strokeWidth: 2, curve: "linear",
+          }),
+          Plot.dot(data, {
+            x: "year_label", y: "total_gbp", fill: "bsc_id", r: 4, tip: true,
+            title: d => `${allDnos.find(n => n.bsc_id === d.bsc_id)?.dno_name}\n${d.year_label}: £${d.total_gbp.toFixed(2)}`,
+          }),
+        ],
+      }));
   };
-  refresh();
 
   btn.addEventListener("click", () => {
-    const allChecked = cb.querySelectorAll("input[type=checkbox]:checked").length === allDnos.length;
-    cb.querySelectorAll("input[type=checkbox]").forEach(inp => { inp.checked = !allChecked; });
-    cb.dispatchEvent(new Event("input", {bubbles: true}));
-    refresh();
+    const addAll = selected.size < allDnos.length;
+    allDnos.forEach(d => addAll ? selected.add(d.bsc_id) : selected.delete(d.bsc_id));
+    rows.forEach(({bsc_id, row, swatch}) => {
+      const on = selected.has(bsc_id);
+      row.style.opacity = on ? "1" : "0.35";
+      swatch.style.background = on ? colorScale.apply(bsc_id) : "var(--ink-mute, #aaa)";
+    });
+    refreshBtn();
+    renderChart(legendDiv.offsetHeight);
   });
 
-  cb.addEventListener("input", refresh);
+  // Legend rows (each is a toggle)
+  const rows = allDnos.map(d => {
+    const color = colorScale.apply(d.bsc_id);
+    const name = d.dno_name.replace(/\s*\([^)]+\)\s*$/, "").trim();
+    const on = selected.has(d.bsc_id);
 
-  const wrapper = html`<div>${btn}${cb}</div>`;
-  wrapper.value = cb.value;
-  cb.addEventListener("input", () => {
-    wrapper.value = cb.value;
-    wrapper.dispatchEvent(new Event("input", {bubbles: true}));
+    const row = document.createElement("div");
+    row.style.cssText = `display:flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;padding:3px 4px;border-radius:3px;opacity:${on ? 1 : 0.35}`;
+
+    const swatch = document.createElement("span");
+    swatch.style.cssText = `display:inline-block;width:16px;height:3px;border-radius:1px;flex-shrink:0;background:${on ? color : "var(--ink-mute, #aaa)"}`;
+
+    const label = document.createElement("span");
+    label.textContent = name.length > 26 ? name.slice(0, 25) + "…" : name;
+
+    row.append(swatch, label);
+    row.addEventListener("click", () => {
+      if (selected.has(d.bsc_id)) { selected.delete(d.bsc_id); row.style.opacity = "0.35"; swatch.style.background = "var(--ink-mute, #aaa)"; }
+      else { selected.add(d.bsc_id); row.style.opacity = "1"; swatch.style.background = color; }
+      refreshBtn();
+      renderChart(legendDiv.offsetHeight);
+    });
+    row.addEventListener("mouseover", () => { row.style.background = "color-mix(in srgb, var(--ink-navy) 6%, var(--cream-paper))"; });
+    row.addEventListener("mouseout",  () => { row.style.background = ""; });
+
+    legendDiv.append(row);
+    return {bsc_id: d.bsc_id, row, swatch};
   });
 
-  return wrapper;
-})());
-```
-
-```js
-const trendData = duos
-  .filter(d => trendDnos.some(t => t.bsc_id === d.bsc_id))
-  .map(d => {
-    const c = calcCosts({...d, ...STD_FRACS}, 2700);
-    return {...d, ...c};
+  // Render with estimate first, then correct to actual legend height after layout
+  renderChart();
+  display(wrapper);
+  requestAnimationFrame(() => {
+    const legH = legendDiv.offsetHeight;
+    if (legH > 50) renderChart(legH);
   });
-
-if (trendData.length === 0) {
-  display(html`<p style="color:#888">Select at least one region above.</p>`);
-} else {
-  display(Plot.plot({
-    width: 680,
-    height: 320,
-    marginLeft: 50,
-    x: {
-      type: "band",
-      label: null,
-    },
-    y: {
-      label: "Annual DUoS cost — 2,700 kWh, 15/45/40 split (£)",
-      zero: true,
-    },
-    color: {
-      legend: true,
-      tickFormat: d => allDnos.find(n => n.bsc_id === d)?.dno_name ?? d,
-    },
-    marks: [
-      Plot.line(trendData, {
-        x: "year_label",
-        y: "total_gbp",
-        stroke: "bsc_id",
-        marker: "circle",
-        strokeWidth: 2,
-        curve: "linear",
-      }),
-      Plot.dot(trendData, {
-        x: "year_label",
-        y: "total_gbp",
-        fill: "bsc_id",
-        r: 4,
-        tip: true,
-        title: d => `${allDnos.find(n => n.bsc_id === d.bsc_id)?.dno_name}\n${d.year_label}: £${d.total_gbp.toFixed(2)}`,
-      }),
-    ],
-  }));
 }
 ```
 
