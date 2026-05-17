@@ -240,12 +240,88 @@ const calcKwh = view(Inputs.range([500, 6000], {
 ```
 
 ```js
+const calcFracs = view((() => {
+  const rec = duos.find(d => d.bsc_id === calcDno.bsc_id && d.year_label === calcYear);
+  const init = rec
+    ? {red: rec.red_fraction, amber: rec.amber_fraction, green: rec.green_fraction}
+    : {red: 1/3, amber: 1/3, green: 1/3};
+
+  const bands = ["red", "amber", "green"];
+  let vals = {...init};
+
+  const container = document.createElement("div");
+  Object.assign(container.style, {marginTop: "0.75rem"});
+  container.value = {...vals};
+
+  const inputs = {}, valueLabels = {};
+
+  const syncAll = () => {
+    for (const b of bands) {
+      inputs[b].value = (vals[b] * 100).toFixed(2);
+      valueLabels[b].textContent = (vals[b] * 100).toFixed(1) + "%";
+    }
+    container.value = {...vals};
+    container.dispatchEvent(new Event("input", {bubbles: true}));
+  };
+
+  const header = document.createElement("p");
+  Object.assign(header.style, {fontSize: "0.85rem", opacity: "0.65", margin: "0 0 6px"});
+  header.textContent = "Adjust time-band fractions — defaults from D0018 PC1 profile for this region.";
+  container.appendChild(header);
+
+  for (const band of bands) {
+    const color = BAND_COLOR[band];
+    const row = document.createElement("div");
+    Object.assign(row.style, {display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px"});
+
+    const swatch = document.createElement("span");
+    Object.assign(swatch.style, {display: "inline-block", width: "12px", height: "12px", background: color, flexShrink: "0"});
+
+    const name = document.createElement("span");
+    Object.assign(name.style, {width: "70px", fontSize: "0.85rem", flexShrink: "0"});
+    name.textContent = band.charAt(0).toUpperCase() + band.slice(1);
+
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = "0";
+    slider.max = "100";
+    slider.step = "0.1";
+    slider.value = (vals[band] * 100).toFixed(2);
+    Object.assign(slider.style, {flex: "1", accentColor: color});
+
+    const valueLabel = document.createElement("span");
+    Object.assign(valueLabel.style, {width: "48px", textAlign: "right", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", flexShrink: "0"});
+    valueLabel.textContent = (vals[band] * 100).toFixed(1) + "%";
+
+    slider.addEventListener("input", () => {
+      const newVal = parseFloat(slider.value) / 100;
+      const delta = newVal - vals[band];
+      const others = bands.filter(b => b !== band);
+      vals[band] = newVal;
+      others.forEach(o => { vals[o] = Math.max(0, vals[o] - delta / 2); });
+      const total = bands.reduce((s, b) => s + vals[b], 0);
+      if (total > 0) bands.forEach(b => vals[b] /= total);
+      syncAll();
+    });
+
+    inputs[band] = slider;
+    valueLabels[band] = valueLabel;
+    row.append(swatch, name, slider, valueLabel);
+    container.appendChild(row);
+  }
+
+  return container;
+})());
+```
+
+```js
 const calcRecord = duos.find(d => d.bsc_id === calcDno.bsc_id && d.year_label === calcYear);
 
 if (!calcRecord) {
   display(html`<p style="color: #888">No data available for this region and year.</p>`);
 } else {
-  const c = calcCosts(calcRecord, calcKwh);
+  const adjRec = {...calcRecord, red_fraction: calcFracs.red, amber_fraction: calcFracs.amber, green_fraction: calcFracs.green};
+  const c = calcCosts(adjRec, calcKwh);
   const stackData = [
     {component: "Peak (red)",       value: c.red_gbp,      order: 0},
     {component: "Shoulder (amber)", value: c.amber_gbp,    order: 1},
@@ -317,22 +393,22 @@ if (!calcRecord) {
       <tbody>
         <tr>
           <td style="padding:4px 8px">${dot(BAND_COLOR.red)}Peak (red)</td>
-          <td style="padding:4px 8px; text-align:right">${(calcRecord.red_fraction * 100).toFixed(1)}%</td>
-          <td style="padding:4px 8px; text-align:right">${(calcRecord.red_fraction * calcKwh).toFixed(0)}</td>
+          <td style="padding:4px 8px; text-align:right">${(calcFracs.red * 100).toFixed(1)}%</td>
+          <td style="padding:4px 8px; text-align:right">${(calcFracs.red * calcKwh).toFixed(0)}</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.red_p_kwh.toFixed(2)}p</td>
           <td style="padding:4px 8px; text-align:right">£${c.red_gbp.toFixed(2)}</td>
         </tr>
         <tr>
           <td style="padding:4px 8px">${dot(BAND_COLOR.amber)}Shoulder (amber)</td>
-          <td style="padding:4px 8px; text-align:right">${(calcRecord.amber_fraction * 100).toFixed(1)}%</td>
-          <td style="padding:4px 8px; text-align:right">${(calcRecord.amber_fraction * calcKwh).toFixed(0)}</td>
+          <td style="padding:4px 8px; text-align:right">${(calcFracs.amber * 100).toFixed(1)}%</td>
+          <td style="padding:4px 8px; text-align:right">${(calcFracs.amber * calcKwh).toFixed(0)}</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.amber_p_kwh.toFixed(2)}p</td>
           <td style="padding:4px 8px; text-align:right">£${c.amber_gbp.toFixed(2)}</td>
         </tr>
         <tr>
           <td style="padding:4px 8px">${dot(BAND_COLOR.green)}Off-peak (green)</td>
-          <td style="padding:4px 8px; text-align:right">${(calcRecord.green_fraction * 100).toFixed(1)}%</td>
-          <td style="padding:4px 8px; text-align:right">${(calcRecord.green_fraction * calcKwh).toFixed(0)}</td>
+          <td style="padding:4px 8px; text-align:right">${(calcFracs.green * 100).toFixed(1)}%</td>
+          <td style="padding:4px 8px; text-align:right">${(calcFracs.green * calcKwh).toFixed(0)}</td>
           <td style="padding:4px 8px; text-align:right">${calcRecord.green_p_kwh.toFixed(2)}p</td>
           <td style="padding:4px 8px; text-align:right">£${c.green_gbp.toFixed(2)}</td>
         </tr>
