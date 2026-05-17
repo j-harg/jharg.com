@@ -242,9 +242,7 @@ const calcKwh = view(Inputs.range([500, 6000], {
 ```js
 const calcFracs = view((() => {
   const rec = duos.find(d => d.bsc_id === calcDno.bsc_id && d.year_label === calcYear);
-  const init = rec
-    ? {red: rec.red_fraction, amber: rec.amber_fraction, green: rec.green_fraction}
-    : {red: 1/3, amber: 1/3, green: 1/3};
+  const init = {red: 0.15, amber: 0.45, green: 0.40};
 
   const bands = ["red", "amber", "green"];
   let vals = {...init};
@@ -266,7 +264,7 @@ const calcFracs = view((() => {
 
   const header = document.createElement("p");
   Object.assign(header.style, {fontSize: "0.85rem", opacity: "0.65", margin: "0 0 6px"});
-  header.textContent = "Adjust time-band fractions — defaults from D0018 PC1 profile for this region.";
+  header.textContent = "Adjust time-band fractions — default 15/45/40 (red/amber/green) approximates the national D0018 PC1 average.";
   container.appendChild(header);
 
   for (const band of bands) {
