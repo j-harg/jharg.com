@@ -12,6 +12,7 @@ The model covers the full cost stack for domestic electricity — network charge
 
 ## Energy
 
+- [**Electricity pricing: overview**](./electricity-pricing/) — How the unit rate on your bill is built up: wholesale, network, policy levies, losses, and the formula that ties them together.
 - [**DUoS: Distribution Use of System**](./duos/) — Explore the network charges that vary by region and time of day, built up from DNO charging statements going back to 2022.
 
 ---
