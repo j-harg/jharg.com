@@ -95,12 +95,17 @@ body {
    ============================================================ */
 
 .observablehq pre,
-.observablehq code {
+.observablehq :not(pre) > code {
   font-family: var(--font-mono);
   font-size: 0.9em;
   background: var(--chalk);
   border: var(--border-1);
   border-radius: var(--radius-sm);
+}
+
+.observablehq pre > code {
+  border: none;
+  background: transparent;
 }
 
 .observablehq pre {
