@@ -586,8 +586,7 @@ if (trendData.length === 0) {
     marginLeft: 50,
     x: {
       type: "band",
-      label: "Year",
-      tickRotate: -30,
+      label: null,
     },
     y: {
       label: "Annual DUoS cost — 2,700 kWh, 15/45/40 split (£)",
