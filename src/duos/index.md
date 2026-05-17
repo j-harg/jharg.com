@@ -25,6 +25,7 @@ Alongside the unit rates, DUoS includes a fixed daily charge (p/MPAN/day) — on
 ```js
 import * as Plot from "npm:@observablehq/plot";
 import * as Inputs from "npm:@observablehq/inputs";
+import * as d3 from "npm:d3";
 
 const BAND_COLOR = { red: "#d62828", amber: "#f4a261", green: "#52b788" };
 
@@ -526,8 +527,27 @@ if (cmpView === "Bar chart") {
   const costByBscId = Object.fromEntries(cmpRecords.map(d => [d.bsc_id, d.total_gbp]));
   const costs = cmpRecords.map(d => d.total_gbp);
 
-  display(Plot.plot({
-    width: Math.min(520, width),
+  // Pre-compute geographic centroids for label placement
+  const featureData = boundaries.features
+    .filter(f => costByBscId[f.properties.bsc_id] != null)
+    .map(f => ({
+      bsc_id: f.properties.bsc_id,
+      area:   f.properties.Area,
+      centroid: d3.geoCentroid(f),
+      cost: costByBscId[f.properties.bsc_id],
+    }));
+
+  // Small/crowded regions get offset labels + leader lines
+  const leaderOffsets = {
+    LOND: {dx:  90, dy: -20},
+    SEEB: {dx: 100, dy:  25},
+  };
+
+  const inRegion   = featureData.filter(d => !leaderOffsets[d.bsc_id]);
+  const withLeader = featureData.filter(d =>  leaderOffsets[d.bsc_id]);
+
+  const plt = Plot.plot({
+    width:  Math.min(520, width),
     height: Math.min(640, width * 1.23),
     projection: {type: "mercator", domain: boundaries},
     color: {
@@ -549,8 +569,69 @@ if (cmpView === "Bar chart") {
           return `${d.properties.Area}\n${cost != null ? `£${cost.toFixed(2)}` : "no data"}`;
         },
       }),
+      // In-region labels (large areas) — white text with dark halo
+      Plot.text(inRegion, {
+        x: d => d.centroid[0],
+        y: d => d.centroid[1],
+        text: d => `£${d.cost.toFixed(0)}`,
+        fill: "white",
+        stroke: "rgba(0,0,0,0.35)",
+        strokeWidth: 3,
+        paintOrder: "stroke",
+        fontWeight: 600,
+        fontSize: 10,
+        fontFamily: "var(--font-mono)",
+      }),
+      // Offset labels for crowded regions
+      Plot.text(withLeader, {
+        x: d => d.centroid[0],
+        y: d => d.centroid[1],
+        text: d => `£${d.cost.toFixed(0)}`,
+        dx: d => leaderOffsets[d.bsc_id].dx,
+        dy: d => leaderOffsets[d.bsc_id].dy,
+        fill: "var(--ink-navy)",
+        stroke: "var(--cream-paper)",
+        strokeWidth: 3,
+        paintOrder: "stroke",
+        fontWeight: 600,
+        fontSize: 10,
+        fontFamily: "var(--font-mono)",
+      }),
     ],
-  }));
+  });
+
+  display(plt);
+
+  // Draw leader lines by measuring actual rendered positions
+  requestAnimationFrame(() => {
+    for (const fd of withLeader) {
+      // Find the region's path via its tooltip title
+      const pathEl = [...plt.querySelectorAll("path")].find(p =>
+        p.querySelector("title")?.textContent.startsWith(fd.area)
+      );
+      // Find the offset text element by label content
+      const label = `£${fd.cost.toFixed(0)}`;
+      const allTextEls = [...plt.querySelectorAll("text")].filter(t => t.textContent.trim() === label);
+      // The offset label is the last match (rendered after in-region labels)
+      const textEl = allTextEls.at(-1);
+      if (!pathEl || !textEl) continue;
+
+      const pb = pathEl.getBBox();
+      const tb = textEl.getBBox();
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", pb.x + pb.width  / 2);
+      line.setAttribute("y1", pb.y + pb.height / 2);
+      line.setAttribute("x2", tb.x + tb.width  / 2);
+      line.setAttribute("y2", tb.y + tb.height / 2);
+      line.setAttribute("stroke", "var(--ink-navy)");
+      line.setAttribute("stroke-width", "1");
+      line.setAttribute("opacity", "0.5");
+      // Insert before the first text group so lines sit under the labels
+      const firstTextGroup = plt.querySelector("g[aria-label*='text']");
+      plt.insertBefore(line, firstTextGroup ?? null);
+    }
+  });
 }
 
 const missing = ["HYDE", "NORW", "SPOW"].filter(id =>
