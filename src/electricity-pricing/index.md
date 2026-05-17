@@ -106,11 +106,3 @@ cost = f × spot    +  f × BSUoS
 ```
 
 The nested structure (d → g → f) means transmission-level charges are amplified by **both** LLF and TLM. A supplier with a high-loss-factor customer effectively pays more for wholesale and BSUoS even at identical spot prices.
-
----
-
-## What this site covers
-
-The model underlying this site focuses on the **DUoS** component — distribution charges across all 14 DNO regions from 2022/23 to 2027/28. Wholesale, BSUoS, TNUoS, and policy levy components are not yet modelled.
-
-→ [DUoS: Distribution charges by region](../duos/)
