@@ -28,8 +28,9 @@ import * as Inputs from "npm:@observablehq/inputs";
 
 const BAND_COLOR = { red: "#d62828", amber: "#f4a261", green: "#52b788" };
 
-const duos  = await FileAttachment("../data/duos.json").json();
-const bands = await FileAttachment("../data/bands.json").json();
+const duos       = await FileAttachment("../data/duos.json").json();
+const bands      = await FileAttachment("../data/bands.json").json();
+const boundaries = await FileAttachment("../data/dno_boundaries.geojson").json();
 
 // Derived lookups
 const allYears = [...new Set(duos.map(d => d.year_label))].sort();
@@ -461,6 +462,10 @@ const cmpKwh = view(Inputs.range([500, 6000], {
 ```
 
 ```js
+const cmpView = view(Inputs.radio(["Bar chart", "Map"], {value: "Bar chart", label: "View"}));
+```
+
+```js
 const STD_FRACS = {red_fraction: 0.15, amber_fraction: 0.45, green_fraction: 0.40};
 
 const cmpRecords = duos
@@ -480,42 +485,73 @@ const cmpData = cmpRecords.flatMap(d => [
 
 const dnoOrder = cmpRecords.map(d => d.dno_name);
 
-display(Plot.plot({
-  width: 680,
-  height: cmpRecords.length * 30 + 60,
-  marginLeft: 260,
-  marginRight: 60,
-  x: {label: "Annual DUoS cost (£)", axis: "top"},
-  y: {
-    domain: dnoOrder,
-    label: null,
-  },
-  color: {
-    domain: ["Peak (red)", "Shoulder (amber)", "Off-peak (green)", "Standing charge"],
-    range:  ["#d62828",    "#f4a261",           "#52b788",          "#6c757d"],
-    legend: true,
-  },
-  marks: [
-    Plot.barX(cmpData, Plot.stackX({
-      order: "order",
-      x: "value",
-      y: "dno_name",
-      fill: "component",
-      insetTop: 3,
-      insetBottom: 3,
-      rx: 2,
-    })),
-    Plot.text(cmpRecords, {
-      x: d => d.total_gbp,
-      y: "dno_name",
-      text: d => `£${d.total_gbp.toFixed(0)}`,
-      dx: 6,
-      fontSize: 11,
-      textAnchor: "start",
-    }),
-    Plot.ruleX([0]),
-  ],
-}));
+if (cmpView === "Bar chart") {
+  display(Plot.plot({
+    width: 680,
+    height: cmpRecords.length * 30 + 60,
+    marginLeft: 260,
+    marginRight: 60,
+    x: {label: "Annual DUoS cost (£)", axis: "top"},
+    y: {
+      domain: dnoOrder,
+      label: null,
+    },
+    color: {
+      domain: ["Peak (red)", "Shoulder (amber)", "Off-peak (green)", "Standing charge"],
+      range:  ["#d62828",    "#f4a261",           "#52b788",          "#6c757d"],
+      legend: true,
+    },
+    marks: [
+      Plot.barX(cmpData, Plot.stackX({
+        order: "order",
+        x: "value",
+        y: "dno_name",
+        fill: "component",
+        insetTop: 3,
+        insetBottom: 3,
+        rx: 2,
+      })),
+      Plot.text(cmpRecords, {
+        x: d => d.total_gbp,
+        y: "dno_name",
+        text: d => `£${d.total_gbp.toFixed(0)}`,
+        dx: 6,
+        fontSize: 11,
+        textAnchor: "start",
+      }),
+      Plot.ruleX([0]),
+    ],
+  }));
+} else {
+  const costByBscId = Object.fromEntries(cmpRecords.map(d => [d.bsc_id, d.total_gbp]));
+  const costs = cmpRecords.map(d => d.total_gbp);
+
+  display(Plot.plot({
+    width: Math.min(520, width),
+    height: Math.min(640, width * 1.23),
+    projection: {type: "mercator", domain: boundaries},
+    color: {
+      type: "linear",
+      domain: [Math.min(...costs), Math.max(...costs)],
+      scheme: "YlOrRd",
+      legend: true,
+      label: "Annual DUoS cost (£)",
+      tickFormat: d => `£${d.toFixed(0)}`,
+    },
+    marks: [
+      Plot.geo(boundaries.features, {
+        fill: d => costByBscId[d.properties.bsc_id] ?? null,
+        stroke: "white",
+        strokeWidth: 0.5,
+        tip: true,
+        title: d => {
+          const cost = costByBscId[d.properties.bsc_id];
+          return `${d.properties.Area}\n${cost != null ? `£${cost.toFixed(2)}` : "no data"}`;
+        },
+      }),
+    ],
+  }));
+}
 
 const missing = ["HYDE", "NORW", "SPOW"].filter(id =>
   !cmpRecords.some(d => d.bsc_id === id)
