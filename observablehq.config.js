@@ -15,7 +15,8 @@ export default {
     {
       name: "Energy",
       pages: [
-        {name: "DUoS: Distribution charges", path: "/duos/"},
+        {name: "Electricity pricing: overview", path: "/electricity-pricing/"},
+        {name: "DUoS: Distribution charges",   path: "/duos/"},
       ]
     }
   ],
