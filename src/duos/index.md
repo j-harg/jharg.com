@@ -310,6 +310,15 @@ const calcFracs = view((() => {
     container.appendChild(row);
   }
 
+  const resetBtn = document.createElement("button");
+  resetBtn.textContent = "Reset to default";
+  Object.assign(resetBtn.style, {marginTop: "4px", fontSize: "0.8rem", cursor: "pointer"});
+  resetBtn.addEventListener("click", () => {
+    bands.forEach(b => { vals[b] = init[b]; });
+    syncAll();
+  });
+  container.appendChild(resetBtn);
+
   return container;
 })());
 ```
