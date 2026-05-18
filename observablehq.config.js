@@ -18,6 +18,7 @@ export default {
       pages: [
         {name: "Electricity pricing: overview", path: "/electricity-pricing/"},
         {name: "DUoS: Distribution charges",   path: "/duos/"},
+        {name: "TNUoS: Transmission charges",  path: "/tnuos/"},
       ]
     }
   ],

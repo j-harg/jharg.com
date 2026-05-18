@@ -1,0 +1,15 @@
+bsc_id,gsp_letter,tnuos_zone_no,tnuos_zone_name
+HYDE,_P,1,Northern Scotland
+SPOW,_N,2,Southern Scotland
+NEEB,_F,3,Northern
+NORW,_G,4,North West
+YELG,_M,5,Yorkshire
+MANW,_D,6,N Wales & Mersey
+EMEB,_B,7,East Midlands
+MIDE,_E,8,Midlands
+EELC,_A,9,Eastern
+SWAE,_K,10,South Wales
+SEEB,_J,11,South East
+LOND,_C,12,London
+SOUT,_H,13,Southern
+SWEB,_L,14,South Western
