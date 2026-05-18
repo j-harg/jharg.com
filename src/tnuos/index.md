@@ -10,11 +10,11 @@ TNUoS for domestic customers has two components. A **standing charge** — the T
 
 ## How it has changed
 
-Before April 2023, TNUoS recovery for domestic customers was bundled entirely into volumetric peak-window rates. Both the residual element (recovering sunk historic transmission investment) and the locational element (reflecting genuine geographic cost differences in the network) were charged as p/kWh against evening-peak consumption. All 14 zones had nonzero rates, ranging from around 3.6 p/kWh in Northern Scotland to 8.7 p/kWh in South Western. Customers who shifted consumption out of the peak window — through solar, batteries, or demand flexibility — could reduce their TNUoS exposure. The problem: residual costs are fixed. Reduced recovery from some customers shifted the burden onto those without the means to self-supply.
+Before April 2023, both the residual and locational elements were bundled into a single volumetric p/kWh rate applied against evening-peak consumption. All 14 zones had nonzero rates.
 
-**April 2023 — Targeted Charging Review (TCR):** Residual costs were moved out of volumetric peak-window rates into a new flat daily standing charge (TDR). Only the locational element remained in the p/kWh rate, and it was dramatically reduced. Zones 1–7 (northern areas with surplus generation) fell to zero. Zones 8–14 retained a small locational signal. Northern customers lost their volumetric exposure but gained the same uniform TDR standing charge as everyone else. Costs converged significantly across regions — but total bills for northern customers rose, because they could no longer reduce exposure by avoiding the peak window.
+**April 2023 — TCR:** Residual costs moved to a flat daily standing charge (TDR). Only the locational element stayed volumetric, and northern zones (surplus generation) fell to zero. Costs converged sharply across regions.
 
-**April 2026 — RIIO-ET3:** Not a methodology change, but a revenue change large enough to have its own section. The price control funding the transmission network's net-zero investment programme — offshore wind connection, north-south backbone reinforcement, EV and heat pump infrastructure — pushed total TNUoS revenue up sharply. Standing charges rose 28–116% by region year-on-year. Because TCR had already fixed the residual into daily charges, the entire increase landed there. It was the largest single contributor to the April 2026 price cap increase.
+**April 2026 — RIIO-ET3:** No methodology change — but TNUoS revenue rose substantially to fund net-zero grid investment. Standing charges increased 28–116% by region, the largest single contributor to the April 2026 price cap rise.
 
 ---
 
@@ -97,6 +97,163 @@ function calcCost(nhh_p_kwh, tdr_gbp_day, annual_kwh, peak_frac) {
   const loc_gbp = annual_kwh * peak_frac * LLF * nhh_p_kwh / 100;
   const tdr_gbp = (tdr_gbp_day ?? 0) * 365;
   return { loc_gbp, tdr_gbp, total_gbp: loc_gbp + tdr_gbp };
+}
+```
+
+## Rate trends
+
+How annual TNUoS costs have evolved — and where official NESO forecasts point. Fixed at 2,700 kWh with 15% evening peak consumption and a flat LLF of 1.08. **Solid lines** are final published tariffs; **dashed lines** are official NESO forecast tariffs, subject to revision.
+
+The step at 2023/24 is TCR: residual costs moved from peak-window rates to the flat TDR, causing northern zones to jump sharply (they lost locational exposure but gained the same TDR floor as everyone else) while southern zones saw a smaller change. Costs converged significantly. The second step at 2026/27 is RIIO-ET3 — network investment costs landing directly on standing charges.
+
+```js
+{
+  const TREND_KWH  = 2700;
+  const TREND_PEAK = 0.15;
+
+  const colorScale = Plot.scale({
+    color: { type: "ordinal", domain: allZones.map(d => d.zone_no) },
+  });
+
+  const selected = new Set(allZones.map(d => d.zone_no));
+
+  const chartDiv  = document.createElement("div");
+  const legendDiv = document.createElement("div");
+  legendDiv.style.cssText = "display:flex;flex-direction:column;gap:0;font-size:0.78rem;font-family:var(--font-mono);flex-shrink:0;padding-top:20px";
+
+  const btn = document.createElement("button");
+  Object.assign(btn.style, { fontSize: "0.78rem", cursor: "pointer", marginBottom: "6px", display: "inline-block", fontFamily: "var(--font-mono)" });
+  const refreshBtn = () => { btn.textContent = selected.size === allZones.length ? "Deselect all" : "Select all"; };
+  refreshBtn();
+
+  const outer = document.createElement("div");
+  outer.style.cssText = "display:flex;align-items:flex-start;gap:16px";
+  outer.append(chartDiv, legendDiv);
+
+  const wrapper = document.createElement("div");
+  wrapper.append(btn, outer);
+
+  const renderChart = (h) => {
+    const trendData = combined
+      .filter(d => selected.has(d.zone_no))
+      .map(d => {
+        const c = calcCost(d.nhh_tariff_floored_p_kwh, d.tdr_gbp_day, TREND_KWH, TREND_PEAK);
+        return { ...d, ...c, zone_name: allZones.find(z => z.zone_no === d.zone_no)?.zone_name };
+      })
+      .sort((a, b) => a.year_fy - b.year_fy);
+
+    const lastFinalFy = finalYears.at(-1);
+    const finalData   = trendData.filter(d => d.pub_class === "final");
+    // Forecast series bridges from the last final point so lines connect
+    const forecastData = trendData.filter(d => d.pub_class === "forecast" || d.year_fy === lastFinalFy);
+
+    const maxCost = Math.max(...trendData.map(d => d.total_gbp), 1);
+
+    const annotations = [
+      { year_label: "2023/24", text: "TCR" },
+      { year_label: "2026/27", text: "RIIO-ET3" },
+    ].filter(a => allYearLabels.includes(a.year_label));
+
+    chartDiv.innerHTML = "";
+    chartDiv.append(Plot.plot({
+      width:        Math.max(400, width - 200),
+      height:       h ?? Math.max(300, 20 + allZones.length * 26),
+      marginLeft:   50,
+      marginBottom: 60,
+      x: { type: "band", label: null, tickRotate: -30 },
+      y: {
+        label: "Annual TNUoS cost — 2,700 kWh, 15% peak, LLF 1.08 (£)",
+        zero: true,
+        domain: [0, maxCost * 1.12],
+      },
+      color: {
+        domain: allZones.map(d => d.zone_no),
+        range:  allZones.map(d => colorScale.apply(d.zone_no)),
+      },
+      marks: [
+        Plot.ruleY([0], { stroke: "var(--theme-foreground-faintest)" }),
+        // Epoch annotations
+        Plot.ruleX(annotations.map(a => a.year_label), {
+          stroke: "var(--ink-navy)", strokeOpacity: 0.18, strokeWidth: 1.5,
+        }),
+        Plot.text(annotations, {
+          x: "year_label", y: () => maxCost * 1.08,
+          text: "text",
+          fontSize: 8, fill: "var(--ink-navy)", fillOpacity: 0.5,
+          textAnchor: "middle",
+        }),
+        // Solid lines: final published rates
+        Plot.line(finalData, {
+          x: "year_label", y: "total_gbp", stroke: "zone_no",
+          marker: "circle", strokeWidth: 2, curve: "linear",
+        }),
+        // Dashed lines: official forecasts (bridged from last final)
+        ...(forecastData.length > 0 ? [
+          Plot.line(forecastData, {
+            x: "year_label", y: "total_gbp", stroke: "zone_no",
+            strokeWidth: 1.5, strokeDasharray: "5,3", strokeOpacity: 0.65, curve: "linear",
+          }),
+        ] : []),
+        Plot.dot(finalData, {
+          x: "year_label", y: "total_gbp", fill: "zone_no", r: 4, tip: true,
+          title: d => `${d.zone_name}\n${d.year_label}: £${d.total_gbp.toFixed(2)}`,
+        }),
+      ],
+    }));
+  };
+
+  btn.addEventListener("click", () => {
+    const addAll = selected.size < allZones.length;
+    allZones.forEach(d => addAll ? selected.add(d.zone_no) : selected.delete(d.zone_no));
+    rows.forEach(({ zone_no, row, swatch }) => {
+      const on = selected.has(zone_no);
+      row.style.opacity = on ? "1" : "0.35";
+      swatch.style.background = on ? colorScale.apply(zone_no) : "var(--ink-mute, #aaa)";
+    });
+    refreshBtn();
+    renderChart(legendDiv.offsetHeight);
+  });
+
+  const rows = allZones.map(d => {
+    const color = colorScale.apply(d.zone_no);
+    const on    = selected.has(d.zone_no);
+
+    const row = document.createElement("div");
+    row.style.cssText = `display:flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;padding:3px 4px;border-radius:3px;opacity:${on ? 1 : 0.35}`;
+
+    const swatch = document.createElement("span");
+    swatch.style.cssText = `display:inline-block;width:16px;height:3px;border-radius:1px;flex-shrink:0;background:${on ? color : "var(--ink-mute, #aaa)"}`;
+
+    const label = document.createElement("span");
+    label.textContent = d.zone_name.length > 26 ? d.zone_name.slice(0, 25) + "…" : d.zone_name;
+
+    row.append(swatch, label);
+    row.addEventListener("click", () => {
+      if (selected.has(d.zone_no)) {
+        selected.delete(d.zone_no);
+        row.style.opacity = "0.35";
+        swatch.style.background = "var(--ink-mute, #aaa)";
+      } else {
+        selected.add(d.zone_no);
+        row.style.opacity = "1";
+        swatch.style.background = color;
+      }
+      refreshBtn();
+      renderChart(legendDiv.offsetHeight);
+    });
+    row.addEventListener("mouseover", () => { row.style.background = "color-mix(in srgb, var(--ink-navy) 6%, var(--cream-paper))"; });
+    row.addEventListener("mouseout",  () => { row.style.background = ""; });
+
+    legendDiv.append(row);
+    return { zone_no: d.zone_no, row, swatch };
+  });
+
+  renderChart();
+  display(wrapper);
+  requestAnimationFrame(() => {
+    const legH = legendDiv.offsetHeight;
+    if (legH > 50) renderChart(legH);
+  });
 }
 ```
 
@@ -313,165 +470,6 @@ const cmpView = view(Inputs.radio(["Bar chart", "Map"], { value: "Bar chart", la
       }
     });
   }
-}
-```
-
----
-
-## Rate trends
-
-How annual TNUoS costs have evolved — and where official NESO forecasts point. Fixed at 2,700 kWh with 15% evening peak consumption and a flat LLF of 1.08. **Solid lines** are final published tariffs; **dashed lines** are official NESO forecast tariffs, subject to revision.
-
-The step at 2023/24 is TCR: residual costs moved from peak-window rates to the flat TDR, causing northern zones to jump sharply (they lost locational exposure but gained the same TDR floor as everyone else) while southern zones saw a smaller change. Costs converged significantly. The second step at 2026/27 is RIIO-ET3 — network investment costs landing directly on standing charges.
-
-```js
-{
-  const TREND_KWH  = 2700;
-  const TREND_PEAK = 0.15;
-
-  const colorScale = Plot.scale({
-    color: { type: "ordinal", domain: allZones.map(d => d.zone_no) },
-  });
-
-  const defaultZones = new Set([9]);
-  const selected = new Set(defaultZones);
-
-  const chartDiv  = document.createElement("div");
-  const legendDiv = document.createElement("div");
-  legendDiv.style.cssText = "display:flex;flex-direction:column;gap:0;font-size:0.78rem;font-family:var(--font-mono);flex-shrink:0;padding-top:20px";
-
-  const btn = document.createElement("button");
-  Object.assign(btn.style, { fontSize: "0.78rem", cursor: "pointer", marginBottom: "6px", display: "inline-block", fontFamily: "var(--font-mono)" });
-  const refreshBtn = () => { btn.textContent = selected.size === allZones.length ? "Deselect all" : "Select all"; };
-  refreshBtn();
-
-  const outer = document.createElement("div");
-  outer.style.cssText = "display:flex;align-items:flex-start;gap:16px";
-  outer.append(chartDiv, legendDiv);
-
-  const wrapper = document.createElement("div");
-  wrapper.append(btn, outer);
-
-  const renderChart = (h) => {
-    const trendData = combined
-      .filter(d => selected.has(d.zone_no))
-      .map(d => {
-        const c = calcCost(d.nhh_tariff_floored_p_kwh, d.tdr_gbp_day, TREND_KWH, TREND_PEAK);
-        return { ...d, ...c, zone_name: allZones.find(z => z.zone_no === d.zone_no)?.zone_name };
-      })
-      .sort((a, b) => a.year_fy - b.year_fy);
-
-    const lastFinalFy = finalYears.at(-1);
-    const finalData   = trendData.filter(d => d.pub_class === "final");
-    // Forecast series bridges from the last final point so lines connect
-    const forecastData = trendData.filter(d => d.pub_class === "forecast" || d.year_fy === lastFinalFy);
-
-    const maxCost = Math.max(...trendData.map(d => d.total_gbp), 1);
-
-    const annotations = [
-      { year_label: "2023/24", text: "TCR" },
-      { year_label: "2026/27", text: "RIIO-ET3" },
-    ].filter(a => allYearLabels.includes(a.year_label));
-
-    chartDiv.innerHTML = "";
-    chartDiv.append(Plot.plot({
-      width:      Math.max(400, width - 200),
-      height:     h ?? Math.max(300, 20 + allZones.length * 26),
-      marginLeft: 50,
-      x: { type: "band", label: null, tickRotate: -30 },
-      y: {
-        label: "Annual TNUoS cost — 2,700 kWh, 15% peak, LLF 1.08 (£)",
-        zero: true,
-        domain: [0, maxCost * 1.12],
-      },
-      color: {
-        domain: allZones.map(d => d.zone_no),
-        range:  allZones.map(d => colorScale.apply(d.zone_no)),
-      },
-      marks: [
-        Plot.ruleY([0], { stroke: "var(--theme-foreground-faintest)" }),
-        // Epoch annotations
-        Plot.ruleX(annotations.map(a => a.year_label), {
-          stroke: "var(--ink-navy)", strokeOpacity: 0.18, strokeWidth: 1.5,
-        }),
-        Plot.text(annotations, {
-          x: "year_label", y: () => maxCost * 1.08,
-          text: "text",
-          fontSize: 8, fill: "var(--ink-navy)", fillOpacity: 0.5,
-          textAnchor: "middle",
-        }),
-        // Solid lines: final published rates
-        Plot.line(finalData, {
-          x: "year_label", y: "total_gbp", stroke: "zone_no",
-          marker: "circle", strokeWidth: 2, curve: "linear",
-        }),
-        // Dashed lines: official forecasts (bridged from last final)
-        ...(forecastData.length > 0 ? [
-          Plot.line(forecastData, {
-            x: "year_label", y: "total_gbp", stroke: "zone_no",
-            strokeWidth: 1.5, strokeDasharray: "5,3", strokeOpacity: 0.65, curve: "linear",
-          }),
-        ] : []),
-        Plot.dot(finalData, {
-          x: "year_label", y: "total_gbp", fill: "zone_no", r: 4, tip: true,
-          title: d => `${d.zone_name}\n${d.year_label}: £${d.total_gbp.toFixed(2)}`,
-        }),
-      ],
-    }));
-  };
-
-  btn.addEventListener("click", () => {
-    const addAll = selected.size < allZones.length;
-    allZones.forEach(d => addAll ? selected.add(d.zone_no) : selected.delete(d.zone_no));
-    rows.forEach(({ zone_no, row, swatch }) => {
-      const on = selected.has(zone_no);
-      row.style.opacity = on ? "1" : "0.35";
-      swatch.style.background = on ? colorScale.apply(zone_no) : "var(--ink-mute, #aaa)";
-    });
-    refreshBtn();
-    renderChart(legendDiv.offsetHeight);
-  });
-
-  const rows = allZones.map(d => {
-    const color = colorScale.apply(d.zone_no);
-    const on    = selected.has(d.zone_no);
-
-    const row = document.createElement("div");
-    row.style.cssText = `display:flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;padding:3px 4px;border-radius:3px;opacity:${on ? 1 : 0.35}`;
-
-    const swatch = document.createElement("span");
-    swatch.style.cssText = `display:inline-block;width:16px;height:3px;border-radius:1px;flex-shrink:0;background:${on ? color : "var(--ink-mute, #aaa)"}`;
-
-    const label = document.createElement("span");
-    label.textContent = d.zone_name.length > 26 ? d.zone_name.slice(0, 25) + "…" : d.zone_name;
-
-    row.append(swatch, label);
-    row.addEventListener("click", () => {
-      if (selected.has(d.zone_no)) {
-        selected.delete(d.zone_no);
-        row.style.opacity = "0.35";
-        swatch.style.background = "var(--ink-mute, #aaa)";
-      } else {
-        selected.add(d.zone_no);
-        row.style.opacity = "1";
-        swatch.style.background = color;
-      }
-      refreshBtn();
-      renderChart(legendDiv.offsetHeight);
-    });
-    row.addEventListener("mouseover", () => { row.style.background = "color-mix(in srgb, var(--ink-navy) 6%, var(--cream-paper))"; });
-    row.addEventListener("mouseout",  () => { row.style.background = ""; });
-
-    legendDiv.append(row);
-    return { zone_no: d.zone_no, row, swatch };
-  });
-
-  renderChart();
-  display(wrapper);
-  requestAnimationFrame(() => {
-    const legH = legendDiv.offsetHeight;
-    if (legH > 50) renderChart(legH);
-  });
 }
 ```
 
