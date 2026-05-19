@@ -52,9 +52,9 @@ Indicative for a typical 2024/25 domestic tariff. During the 2022–23 energy cr
 
 | Charge | Who charges | What it covers |
 |---|---|---|
-| DUoS | 14 regional DNOs | Local distribution network (substation to meter) |
-| TNUoS | National Grid ESO | High-voltage transmission across GB |
-| AAHEDC | Ofgem | Assistance for high-cost distribution areas (Hydro) |
+| [DUoS](../duos/) | 14 regional DNOs | Local distribution network (substation to meter) |
+| [TNUoS](../tnuos/) | National Grid ESO | High-voltage transmission across GB |
+| [AAHEDC](../aahedc/) | Ofgem | Assistance for high-cost distribution areas (Hydro) |
 
 DUoS is where regional variation is most pronounced — rates differ by up to 4× across DNO areas and vary by time of day. → [Explore DUoS charges by region](../duos/)
 
